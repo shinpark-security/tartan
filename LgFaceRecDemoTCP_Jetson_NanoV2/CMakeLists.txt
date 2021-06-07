@@ -5,8 +5,13 @@ project(${PROJECT_NAME})# LANGUAGES CXX CUDA)
 set (CMAKE_CXX_STANDARD 11)
 
 # OpenCV
+INCLUDE(FindPkgConfig)
 find_package(OpenCV REQUIRED)
 find_package(CUDA)
+pkg_check_modules(pkgs REQUIRED glib-2.0 gobject-2.0 gio-2.0 gio-unix-2.0  )
+FOREACH(flag ${pkgs_CFLAGS})
+  SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
+ENDFOREACH(flag)
 message("-- CUDA version: ${CUDA_VERSION}")
 
 set(
@@ -58,6 +63,7 @@ if(NOT TENSORRT_FOUND)
   message(ERROR
     "Cannot find TensorRT library.")
 endif()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CFLAGS}")
 
 # l2norm_helper plugin
 add_subdirectory(trt_l2norm_helper)
@@ -76,5 +82,6 @@ cuda_add_executable(${PROJECT_NAME} ${DIR_SRCS})
 target_link_libraries(${PROJECT_NAME}
   trt_l2norm_helper
   ${TENSORRT_LIBRARY}
+  ${pkgs_LDFLAGS}
 )
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS}) 
