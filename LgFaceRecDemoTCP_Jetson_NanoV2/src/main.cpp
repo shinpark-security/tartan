@@ -9,6 +9,7 @@
 #include <glib.h>
 #include <unistd.h>
 
+#include "mymsg.h"
 #include "main.h"
 #include "imgproc.h"
 #include "comm.h"
@@ -17,7 +18,7 @@
 gboolean thread_start(tServiceData *psbd);
 gboolean thread_stop(tServiceData *psbd);
 static gboolean on_handle_sigterm(gpointer pUserData);
-
+static gpointer main_thread (gpointer data);
 
 
 static gboolean on_handle_sigterm(gpointer pUserData)
@@ -29,8 +30,8 @@ static gboolean on_handle_sigterm(gpointer pUserData)
   if (psbd != nullptr)  {
       /* quit main loop */
       if ( psbd->mainloop != nullptr ) {
-        thread_stop(psbd);
         g_main_loop_quit(psbd->mainloop);
+        thread_stop(psbd);
       }
       ret=TRUE;
   }
@@ -45,37 +46,51 @@ gboolean thread_start(tServiceData *psbd)
     printf("thread_start()+\n");
     if (psbd != nullptr) {
     //     psbd->pworker_msg_handler = worker_msg_handler;
-    //     psbd->queue = g_async_queue_new ();
+      psbd->queue = g_async_queue_new ();
       psbd->thread_run=true;
-      psbd->thread = g_thread_new ("service_main", service_main, psbd);
-      if (psbd->thread != nullptr) {
+      psbd->main_thread = g_thread_new ("main_thread", main_thread, psbd);
+      if (psbd->main_thread != nullptr) {
           ret=true;
       }
     }
     return ret;
 }
 
-gpointer service_main (gpointer data) {
+gpointer main_thread (gpointer data) {
+  if (data==nullptr) return nullptr;
   tServiceData *psbd=(tServiceData *)data;
 
-  CComm *pcom=new CComm();
-  CImgProc *pimg=new CImgProc();
-
-  pcom->start(psbd->tcp_port);
-  pimg->start();
+  psbd->pcom->start(psbd->tcp_port);
+  psbd->pai->start(psbd->queue);
 
   while(psbd->thread_run) {
+    MyMsg* pmsg = (MyMsg*) g_async_queue_timeout_pop  (psbd->queue, 1000000U);
+    if (pmsg == GINT_TO_POINTER (-1))
+    {
+        printf("Exitting.....\n");
+        break;
+    }
+    if (pmsg) {
+      printf("MSG:%d\n",pmsg->msgid);
+      switch(pmsg->msgid) {
+        case MYMSG_FRAME: {
+            psbd->pcom->send_jpg(pmsg->mat);
+            pmsg->mat.release();
+        }
+      }
+      delete pmsg;
+    }
+    psbd->pai->set_enable_send(psbd->pcom->tcp_connected);
 
-    sleep(1);
-    printf("main thread...\n");
+    // printf("main thread...\n");
   }
 
-
-  delete pcom;
-  pcom = nullptr;
-
-  delete pimg;
-  pimg = nullptr;
+  if (psbd->pcom) {
+    psbd->pcom->stop();
+  }
+  if (psbd->pai) {
+    psbd->pai->stop();
+  }
 
 }
 
@@ -86,10 +101,16 @@ gboolean thread_stop(tServiceData *psbd)
     printf("thread_stop()+\n");
 
     if (psbd != nullptr) {
-        // g_async_queue_push (ppowm->queue, ((gpointer) (glong*) (glong)(-1)) );
+      g_async_queue_push (psbd->queue, ((gpointer) (glong*) (glong)(-1)) );
+      if (psbd->pcom) {
+        psbd->pcom->stop();
+      }
+      if (psbd->pai) { 
+        psbd->pai->stop();
+      }
       psbd->thread_run=false;
-      (void)g_thread_join (psbd->thread);
-      // g_async_queue_unref (ppowm->queue);
+      (void)g_thread_join (psbd->main_thread);
+      g_async_queue_unref (psbd->queue);
       ret=true;
     }
     return ret;
@@ -98,16 +119,19 @@ gboolean thread_stop(tServiceData *psbd)
 int main(int argc, char *argv[])
 {
   tServiceData sbd;
+  sbd.pcom=new CComm();
+  sbd.pai=new CImgProc();
+ 
   sbd.mainloop = g_main_loop_new(nullptr, false);
   if (sbd.mainloop !=nullptr) {
       guint sig1,sig2;
 
     sbd.tcp_port=2000;
-    // (void)configureWdogTimer(ppowm);
+    // (void)configureWdogTimer(psbd);
 
     if (thread_start(&sbd)) {
-        sig1=g_unix_signal_add(SIGINT, &on_handle_sigterm, nullptr);
-        sig2=g_unix_signal_add(SIGTERM, &on_handle_sigterm, nullptr);
+        sig1=g_unix_signal_add(SIGINT, &on_handle_sigterm, &sbd);
+        sig2=g_unix_signal_add(SIGTERM, &on_handle_sigterm, &sbd);
         printf("starting main loop....\n");
 
       //     (void)sd_notify(0, "READY=1");
@@ -124,6 +148,15 @@ int main(int argc, char *argv[])
 
   }
 
+  if (sbd.pcom) {
+    delete sbd.pcom;
+    sbd.pcom = nullptr;
+  }
+
+  if (sbd.pai) {
+    delete sbd.pai;
+    sbd.pai = nullptr;
+  }
   return 0;
 }
 

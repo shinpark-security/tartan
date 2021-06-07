@@ -3,9 +3,11 @@
 #define COMM_H_
 
 #include <glib.h>
+
+#include <string>
+#include "network.h"
 #include "NetworkTCP.h"
 #include "TcpSendRecvJpeg.h"
-// #include <opencv2/core/core.hpp>
 
 
 
@@ -28,6 +30,7 @@ public:
     gboolean connection_wait(void) ;
     gboolean send_jpg(const cv::Mat frame);
     static gpointer comm_thread (gpointer data);
+    gboolean tcp_connected;
 
 };
 

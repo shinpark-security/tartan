@@ -16,10 +16,8 @@
 #include "NetworkTCP.h"
 #include "TcpSendRecvJpeg.h"
 #include <termios.h>
-
+#include "mymsg.h"
 #include "imgproc.h"
-
-;
 
 CImgProc::CImgProc(){
   thread_run=true;
@@ -30,18 +28,25 @@ CImgProc::~CImgProc(){
 }
 
 gboolean
-CImgProc::start(){
-
-  thread = g_thread_new ("comm_thread", comm_thread, this);
+CImgProc::start(GAsyncQueue *q){
+  main_queue=q;
+  thread = g_thread_new ("imgproc_thread", imgproc_thread, this);
   if (thread != nullptr)  {
       return true;
   }
   return false;
 }
+gboolean 
+CImgProc::set_enable_send(gboolean enable)
+{
+  enable_send=enable;
+  return true;
+}
 
 
 gboolean
 CImgProc::stop(){
+  if (!thread_run) return true;
   thread_run=false;
   (void)g_thread_join(thread);
   return true;
@@ -73,11 +78,12 @@ CImgProc::getch()
 
 
 using namespace nvinfer1;
-using namespace nvuffparser
+using namespace nvuffparser;
+
 gpointer 
 CImgProc::imgproc_thread (gpointer data)
 {
-  tServiceData *psbd=(tServiceData *)data;
+  CImgProc *pthis=(CImgProc *)data;
   bool               UseCamera=false;
 
 //    if (argc==2) UseCamera=true;
@@ -141,7 +147,7 @@ CImgProc::imgproc_thread (gpointer data)
     outputBbox.clear();
 
 
-  //  if  ((TcpListenPort=OpenTcpListenPort(psbd->tcp_port))==NULL)  // Open TCP Network port
+  //  if  ((TcpListenPort=OpenTcpListenPort(pthis->tcp_port))==NULL)  // Open TCP Network port
   //    {
   //      printf("OpenTcpListenPortFailed\n");
   //      return(nullptr); 
@@ -149,7 +155,7 @@ CImgProc::imgproc_thread (gpointer data)
 
     
   //  clilen = sizeof(cli_addr);
-  //  printf("Listening for connections   port=%d\n", psbd->tcp_port);
+  //  printf("Listening for connections   port=%d\n", pthis->tcp_port);
 
   //  if  ((TcpConnectedPort=AcceptTcpConnection(TcpListenPort,&cli_addr,&clilen))==NULL)
   //    {  
@@ -164,7 +170,7 @@ CImgProc::imgproc_thread (gpointer data)
     // loop over frames with inference
     auto globalTimeStart = chrono::steady_clock::now();
     
-    while (psbd->thread_run) {
+    while (pthis->thread_run) {
         videoStreamer->getFrame(frame);
         if (frame.empty()) {
             std::cout << "Empty frame! Exiting...\n Try restarting nvargus-daemon by "
@@ -195,15 +201,21 @@ CImgProc::imgproc_thread (gpointer data)
         
         // if (TcpSendImageAsJpeg(TcpConnectedPort,frame)<0)  break;
 
+        if (pthis->enable_send && pthis->main_queue) {
+          MyMsg *pmsg = new MyMsg;
+          pmsg->msgid=MYMSG_FRAME;
+          pmsg->mat=frame.clone(); //Mat copy
+          g_async_queue_push (pthis->main_queue, pmsg );
+        }
 
         //cv::imshow("VideoSource", frame);
         nbFrames++;
         outputBbox.clear();
         frame.release();
-        if (kbhit())
+        if (pthis->kbhit())
           {
           // Stores the pressed key in ch
-           char keyboard =  getch();
+           char keyboard =  pthis->getch();
 
         if (keyboard == 'q') break;
         else if(keyboard == 'n') 
