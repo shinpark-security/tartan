@@ -12,6 +12,7 @@
 #include "network.h"
 #include "mtcnn.h"
 #include <glib.h>
+#include "common.h"
 
 #include "NetworkTCP.h"
 #include "TcpSendRecvJpeg.h"
@@ -21,10 +22,12 @@
 
 CImgProc::CImgProc(){
   thread_run=true;
+  main_queue=nullptr;
+  imgproc_queue=g_async_queue_new ();
 }
 
 CImgProc::~CImgProc(){
-
+  g_async_queue_unref (imgproc_queue);
 }
 
 gboolean
@@ -36,6 +39,7 @@ CImgProc::start(GAsyncQueue *q){
   }
   return false;
 }
+
 gboolean 
 CImgProc::set_enable_send(gboolean enable)
 {
@@ -47,7 +51,9 @@ CImgProc::set_enable_send(gboolean enable)
 gboolean
 CImgProc::stop(){
   if (!thread_run) return true;
+  g_async_queue_push (imgproc_queue, ((gpointer) (glong*) (glong)(-1)) );
   thread_run=false;
+
   (void)g_thread_join(thread);
   return true;
 }
@@ -76,6 +82,17 @@ CImgProc::getch()
 // Uncomment to print timings in milliseconds
 // #define LOG_TIMES
 
+gboolean 
+CImgProc::add_new_user(const string name)
+{
+  printf("add_new_user()+\n");
+  ImgProcMsg *pmsg = new ImgProcMsg;
+  pmsg->msgid=IMGPROC_ADDNEW;
+  pmsg->name=name;
+  g_async_queue_push (imgproc_queue, pmsg ); 
+  return true;
+}
+ 
 
 using namespace nvinfer1;
 using namespace nvuffparser;
@@ -171,6 +188,7 @@ CImgProc::imgproc_thread (gpointer data)
     auto globalTimeStart = chrono::steady_clock::now();
     
     while (pthis->thread_run) {
+
         videoStreamer->getFrame(frame);
         if (frame.empty()) {
             std::cout << "Empty frame! Exiting...\n Try restarting nvargus-daemon by "
@@ -212,38 +230,41 @@ CImgProc::imgproc_thread (gpointer data)
         nbFrames++;
         outputBbox.clear();
         frame.release();
-        if (pthis->kbhit())
-          {
-          // Stores the pressed key in ch
-           char keyboard =  pthis->getch();
-
-        if (keyboard == 'q') break;
-        else if(keyboard == 'n') 
-          {
-         
-            auto dTimeStart = chrono::steady_clock::now();
-            videoStreamer->getFrame(frame);
-            // Create a destination to paint the source into.
-            dst_img.create(frame.size(), frame.type());
-
-            // Push the images into the GPU
-            src_gpu.upload(frame);
-            cv::cuda::rotate(src_gpu, dst_gpu, src_gpu.size(), 180, src_gpu.size().width, src_gpu.size().height);
-            dst_gpu.download(frame);
-
-            outputBbox = mtCNN.findFace(frame);
-
-            // if (TcpSendImageAsJpeg(TcpConnectedPort,frame)<0)  break;
 
 
-            //cv::imshow("VideoSource", frame);
-            faceNet.addNewFace(frame, outputBbox);
-            auto dTimeEnd = chrono::steady_clock::now();
-            globalTimeStart += (dTimeEnd - dTimeStart);
-            
+        ImgProcMsg* pmsg = (ImgProcMsg*) g_async_queue_timeout_pop  (pthis->imgproc_queue, 10U);
+        if (pmsg == GINT_TO_POINTER (-1)) {
+          printf("Exit imgproc.......\n");
+          break;
+        } else if (pmsg) {
+          switch(pmsg->msgid) {
+          case IMGPROC_ADDNEW: {
+              printf("MSG:%d  ADDNEW name=%s\n",pmsg->msgid, pmsg->name.c_str());
+
+              auto dTimeStart = chrono::steady_clock::now();
+              videoStreamer->getFrame(frame);
+              // Create a destination to paint the source into.
+              dst_img.create(frame.size(), frame.type());
+
+              // Push the images into the GPU
+              src_gpu.upload(frame);
+              cv::cuda::rotate(src_gpu, dst_gpu, src_gpu.size(), 180, src_gpu.size().width, src_gpu.size().height);
+              dst_gpu.download(frame);
+
+              outputBbox = mtCNN.findFace(frame);
+
+              // if (TcpSendImageAsJpeg(TcpConnectedPort,frame)<0)  break;
+
+
+              //cv::imshow("VideoSource", frame);
+              faceNet.addNewFace(frame, outputBbox, pmsg->name);
+              auto dTimeEnd = chrono::steady_clock::now();
+              globalTimeStart += (dTimeEnd - dTimeStart);              
+            }
+            break;
           }
-         }
-
+          delete pmsg;
+        }
 
         #ifdef LOG_TIMES
         std::cout << "mtCNN took " << std::chrono::duration_cast<chrono::milliseconds>(endMTCNN - startMTCNN).count() << "ms\n";

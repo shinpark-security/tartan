@@ -8,6 +8,7 @@
 #include <glib-unix.h>
 #include <glib.h>
 #include <unistd.h>
+#include "common.h"
 
 #include "mymsg.h"
 #include "main.h"
@@ -60,8 +61,8 @@ gpointer main_thread (gpointer data) {
   if (data==nullptr) return nullptr;
   tServiceData *psbd=(tServiceData *)data;
 
-  psbd->pcom->start(psbd->tcp_port);
-  psbd->pai->start(psbd->queue);
+  psbd->pcom->start(psbd->tcp_port,psbd->queue);
+  psbd->pimgproc->start(psbd->queue);
 
   while(psbd->thread_run) {
     MyMsg* pmsg = (MyMsg*) g_async_queue_timeout_pop  (psbd->queue, 1000000U);
@@ -71,25 +72,34 @@ gpointer main_thread (gpointer data) {
         break;
     }
     if (pmsg) {
-      printf("MSG:%d\n",pmsg->msgid);
       switch(pmsg->msgid) {
         case MYMSG_FRAME: {
-            psbd->pcom->send_jpg(pmsg->mat);
-            pmsg->mat.release();
+          printf(".");
+          psbd->pcom->send_jpg(pmsg->mat);
+          pmsg->mat.release();
         }
+        break;
+        case MYMSG_CONTROL: {
+          // printf("MSG:%d\n",pmsg->msgid);
+          char* cmd=(char*)pmsg->pdata;
+          printf("CONTROL MESSAGE RECEIVED: %10s\n",cmd);
+          // psbd->pcom->send_response((const unsigned char *)"response",5);
+          // psbd->pimgproc->add_new_user("dolmangi");
+          delete cmd;
+        }
+        break;
       }
       delete pmsg;
     }
-    psbd->pai->set_enable_send(psbd->pcom->tcp_connected);
-
+    psbd->pimgproc->set_enable_send(psbd->pcom->tcp_connected);
     // printf("main thread...\n");
   }
 
   if (psbd->pcom) {
     psbd->pcom->stop();
   }
-  if (psbd->pai) {
-    psbd->pai->stop();
+  if (psbd->pimgproc) {
+    psbd->pimgproc->stop();
   }
 
 }
@@ -105,8 +115,8 @@ gboolean thread_stop(tServiceData *psbd)
       if (psbd->pcom) {
         psbd->pcom->stop();
       }
-      if (psbd->pai) { 
-        psbd->pai->stop();
+      if (psbd->pimgproc) { 
+        psbd->pimgproc->stop();
       }
       psbd->thread_run=false;
       (void)g_thread_join (psbd->main_thread);
@@ -120,7 +130,7 @@ int main(int argc, char *argv[])
 {
   tServiceData sbd;
   sbd.pcom=new CComm();
-  sbd.pai=new CImgProc();
+  sbd.pimgproc=new CImgProc();
  
   sbd.mainloop = g_main_loop_new(nullptr, false);
   if (sbd.mainloop !=nullptr) {
@@ -153,9 +163,9 @@ int main(int argc, char *argv[])
     sbd.pcom = nullptr;
   }
 
-  if (sbd.pai) {
-    delete sbd.pai;
-    sbd.pai = nullptr;
+  if (sbd.pimgproc) {
+    delete sbd.pimgproc;
+    sbd.pimgproc = nullptr;
   }
   return 0;
 }

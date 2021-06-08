@@ -7,6 +7,7 @@
 typedef enum {
     MYMSG_NONE=0,
     MYMSG_FRAME=1,
+    MYMSG_CONTROL=2,
 } _e_MSG_ID;
 
 typedef struct {
@@ -17,5 +18,6 @@ typedef struct {
   cv::Mat mat;
 } MyMsg;
 
+#define PACKET_SIZE 10
 
 #endif /*MY_MSG_H_*/

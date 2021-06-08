@@ -256,6 +256,17 @@ void FaceNetClassifier::addNewFace(cv::Mat &image, std::vector<struct Bbox> outp
     cv::imwrite(filePath, image);
 }
 
+void FaceNetClassifier::addNewFace(cv::Mat &image, std::vector<struct Bbox> outputBbox,string newName) {
+    std::cout << "Adding new person...\nPlease make sure there is only one face in the current frame.\n"
+              << "What's your name? ";
+    std::cout << "Hi " << newName << ", you will be added to the database.\n";
+    forwardAddFace(image, outputBbox, newName);
+    string filePath = "../imgs/";
+    filePath.append(newName);
+    filePath.append(".jpg");
+    cv::imwrite(filePath, image);
+}
+
 void FaceNetClassifier::resetVariables() {
     m_embeddings.clear();
     m_croppedFaces.clear();

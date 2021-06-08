@@ -9,7 +9,7 @@
 
 typedef struct {
     CComm *pcom;
-    CImgProc *pai;
+    CImgProc *pimgproc;
     gboolean thread_run;
     GThread *main_thread;
     GAsyncQueue *queue;

@@ -1,4 +1,4 @@
-
+#include "common.h"
 #include "comm.h"
 #include "mymsg.h"
 #include <sys/socket.h> 
@@ -6,10 +6,13 @@
 
 CComm::CComm() {
     tcp_connected=false;
+    g_mutex_init(&lock);
+ 
 }
 
 CComm::~CComm() {
     stop();
+    g_mutex_clear(&lock);
 }
 
 
@@ -31,16 +34,56 @@ CComm::connection_wait(void) {
 gboolean
 CComm::send_jpg(const cv::Mat frame) {
 
+    gboolean ret=true;
     if (!tcp_connected) return false;
-
-    if (TcpSendImageAsJpeg(TcpConnectedPort,frame)<0)  {
-        tcp_connected=false;
-        return false;
+    g_mutex_lock (&lock);
+    int sents=0;
+    try {
+        // printf("sending...\n");
+        sents=TcpSendImageAsJpeg(TcpConnectedPort,frame);
+        // printf("sent...%d\n",sents);
+        if (sents<0)  {
+            tcp_connected=false;
+            ret=false;
+        }    
     }
+    catch (int ex) {
+        printf("TcpSendImageAsJpeg Exception...%d\n",ex);
+        tcp_connected=ret;
+        CloseTcpConnectedPort(&TcpConnectedPort);
+        ret=false;
+    }   
+    g_mutex_unlock (&lock);
 
-    return true;
+    return ret;
 }
 
+gboolean
+CComm::send_response(const unsigned char *buff, size_t len) {
+
+    gboolean ret=true;
+    if (!tcp_connected) return false;
+    g_mutex_lock (&lock);
+    int sents=0;
+    try {
+        // printf("sending...\n");
+        sents=WriteDataTcp(TcpConnectedPort,(unsigned char*)buff,(size_t)len);
+        // printf("sent...%d\n",sents);
+        if (sents<0)  {
+            tcp_connected=false;
+            ret=false;
+        }    
+    }
+    catch (int ex) {
+        printf("send_response Exception...%d\n",ex);
+        tcp_connected=ret;
+        CloseTcpConnectedPort(&TcpConnectedPort);
+        ret=false;
+    }   
+    g_mutex_unlock (&lock);
+
+    return ret;
+}
 gpointer 
 CComm::comm_thread (gpointer data) {
     printf("comm_thread()+");
@@ -55,52 +98,83 @@ CComm::comm_thread (gpointer data) {
 
 
         if (!pcom->tcp_connected) {
-            if (pcom->connection_wait()) {
-                pcom->tcp_connected=true;
-                printf("Connected.........................\n");
+            printf("wait for connection..\n");
+            try {
+                if (pcom->connection_wait()) {
+                    pcom->tcp_connected=true;
+                    printf("Connected.........................\n");
+                }
+            }
+            catch (int ex) {
+                    printf("connection_wait Exception...%d\n",ex);
+                    pcom->tcp_connected=false;
+                    CloseTcpConnectedPort(&pcom->TcpConnectedPort);
+                    continue;
             }
         } else {
-            printf("check...\n");
-// 
-            // int retval = getsockopt (pcom->TcpConnectedPort->ConnectedFd, SOL_SOCKET, SO_ERROR, &error, &len);
-
-
-            // use the poll system call to be notified about socket status changes
+            // printf("check...\n");
             struct pollfd pfd;
             pfd.fd = pcom->TcpConnectedPort->ConnectedFd;
             pfd.events = POLLIN | POLLHUP | POLLRDNORM;
             pfd.revents = 0;
-            while (pfd.revents == 0) {
-                // call poll with a timeout of 100 ms
-                if (poll(&pfd, 1, 100) > 0) {
-                    printf("ERROR...............\n");
+            unsigned char buffer[PACKET_SIZE];
+            int ret=0;
+
+            if (pfd.revents == 0) {
+                // g_mutex_lock (&pcom->lock);
+                memset(buffer,0,PACKET_SIZE);
+               
+                int pollret=0;
+                try {
+                    pollret=poll(&pfd, 1, 100);  // call poll with a timeout of 100 ms
+                }
+                catch (int ex) {
+                    printf("Poll Exception...%d\n",ex);
                     pcom->tcp_connected=false;
                     CloseTcpConnectedPort(&pcom->TcpConnectedPort);
-
-                    // if result > 0, this means that there is either data available on the
-                    // socket, or the socket has been closed
-                    // char buffer[32];
-                    // if (recv(fd, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT) == 0) {
-                    //     // if recv returns zero, that means the connection has been closed:
-                    //     // kill the child process
-                    //     kill(childProcess, SIGKILL);
-                    //     waitpid(childProcess, &status, WNOHANG);
-                    //     close(fd);
-                    //     // do something else, e.g. go on vacation
-                    // }
                 }
+                if ( pollret > 0) {
+                    try {
+                        ret=recv(pcom->TcpConnectedPort->ConnectedFd, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT);
+                        if (ret==0) {
+                            printf("Check ERROR...............\n");
+                            pcom->tcp_connected=false;
+                            CloseTcpConnectedPort(&pcom->TcpConnectedPort);
+                        }
+                        if (ret>0) {
+                            ret=ReadDataTcp(pcom->TcpConnectedPort,buffer,PACKET_SIZE);
+                            // printf("bytes=%d, data=[%10s]\n", ret, buffer);     
+                            if (pcom->main_queue) {
+                                MyMsg *pmsg = new MyMsg;
+                                pmsg->msgid=MYMSG_CONTROL;
+                                pmsg->pdata=(gpointer)new char[ret];
+                                memcpy(pmsg->pdata,buffer,ret);
+                                g_async_queue_push (pcom->main_queue, pmsg );
+                            }                            
+                        }
+                    }
+                    catch (int ex) {
+                        printf("Exception...%d\n",ex);
+                        pcom->tcp_connected=false;
+                        CloseTcpConnectedPort(&pcom->TcpConnectedPort);
+
+                    }
+                    
+                }
+                // g_mutex_unlock (&pcom->lock);
             }
 
         }
-        sleep(1);
-        printf("comm thread...\n");
+        sleep(0.1);
+        // printf("comm thread...\n");
     }
     printf("comm_thread()-");
 }
 
 gboolean
-CComm::start(int port) {
+CComm::start(int port, GAsyncQueue *q) {
     printf("comm-start()+\n");
+    main_queue=q;
     tcp_port=port;
     thread_run=true;
 

@@ -2,6 +2,20 @@
 #define IMGPROC_H_
 
 #include <glib.h>
+#include <string>
+
+#define MAX_NAME_LENGTH 20
+
+typedef enum {
+    IMGPROC_NONE=0,
+    IMGPROC_ADDNEW=1,
+} _e_IMGPROC_MSG_ID;
+
+typedef struct {
+  _e_IMGPROC_MSG_ID msgid;
+  string name;
+} ImgProcMsg;
+
 
 
 class CImgProc {
@@ -15,11 +29,12 @@ public:
     int kbhit();
     int getch();
     gboolean set_enable_send(gboolean enable);
-    GAsyncQueue *main_queue;
-
+    gboolean add_new_user(const string name);
     static gpointer imgproc_thread (gpointer data);
 private:
     gboolean enable_send;
+    GAsyncQueue *main_queue;
+    GAsyncQueue *imgproc_queue;
 };
 
 

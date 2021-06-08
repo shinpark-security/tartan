@@ -25,12 +25,17 @@ public:
     int tcp_port;
     gboolean thread_run;
     GThread *thread;
-    gboolean start(int port);
+    gboolean start(int port,GAsyncQueue *q);
     gboolean stop();
     gboolean connection_wait(void) ;
     gboolean send_jpg(const cv::Mat frame);
+    gboolean send_response(const unsigned char *buff, size_t len);
+
     static gpointer comm_thread (gpointer data);
     gboolean tcp_connected;
+private:
+    GMutex lock;
+    GAsyncQueue *main_queue;
 
 };
 
