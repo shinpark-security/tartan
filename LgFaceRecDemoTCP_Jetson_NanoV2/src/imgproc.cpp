@@ -23,6 +23,14 @@
 CImgProc::CImgProc(){
   thread_run=true;
   main_queue=nullptr;
+  camera_dev="";
+  imgproc_queue=g_async_queue_new ();
+}
+
+CImgProc::CImgProc(string dev){
+  thread_run=true;
+  main_queue=nullptr;
+  camera_dev=dev;
   imgproc_queue=g_async_queue_new ();
 }
 
@@ -135,8 +143,11 @@ CImgProc::imgproc_thread (gpointer data)
     VideoStreamer *videoStreamer;
 
     // init opencv stuff
-    if (UseCamera)  videoStreamer = new VideoStreamer(0, videoFrameWidth, videoFrameHeight, 60, isCSICam);
-    // else videoStreamer = new VideoStreamer(argv[2], videoFrameWidth, videoFrameHeight);
+    if (pthis->camera_dev=="")  videoStreamer = new VideoStreamer(0, videoFrameWidth, videoFrameHeight, 60, isCSICam);
+    else {
+      printf("Using Camera Device : %s\n",pthis->camera_dev.c_str() );
+      videoStreamer = new VideoStreamer(pthis->camera_dev, videoFrameWidth, videoFrameHeight);
+    }
 
 
 

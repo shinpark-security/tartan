@@ -130,7 +130,11 @@ int main(int argc, char *argv[])
 {
   tServiceData sbd;
   sbd.pcom=new CComm();
-  sbd.pimgproc=new CImgProc();
+  if (argc==2) {
+    sbd.pimgproc=new CImgProc(argv[1]);
+  }
+  else
+    sbd.pimgproc=new CImgProc();
  
   sbd.mainloop = g_main_loop_new(nullptr, false);
   if (sbd.mainloop !=nullptr) {

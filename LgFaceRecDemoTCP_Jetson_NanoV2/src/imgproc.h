@@ -21,6 +21,7 @@ typedef struct {
 class CImgProc {
 public:
     CImgProc();
+    CImgProc(string dev);
     ~CImgProc();
     gboolean thread_run;
     GThread *thread;
@@ -31,6 +32,7 @@ public:
     gboolean set_enable_send(gboolean enable);
     gboolean add_new_user(const string name);
     static gpointer imgproc_thread (gpointer data);
+    string camera_dev;
 private:
     gboolean enable_send;
     GAsyncQueue *main_queue;
