@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------------------------
 #include <opencv2/highgui/highgui.hpp>
 #include "TcpSendRecvJpeg.h"
+#include "Protocol/ProtoBuff.h"
+
 static  int init_values[2] = { cv::IMWRITE_JPEG_QUALITY,80 }; //default(95) 0-100
 static  std::vector<int> param (&init_values[0], &init_values[0]+2);
 static  std::vector<uchar> sendbuff;//buffer for coding
@@ -24,6 +26,29 @@ int TcpSendImageAsJpeg(TTcpConnectedPort * TcpConnectedPort,cv::Mat Image)
     if (WriteDataTcp(TcpConnectedPort,(unsigned char *)&imagesize,sizeof(imagesize))!=sizeof(imagesize))
     return(-1);
     return(WriteDataTcp(TcpConnectedPort,sendbuff.data(), sendbuff.size()));
+}
+
+int TcpSendImageAsJpegProtocol(TTcpConnectedPort* TcpConnectedPort, cv::Mat Image)
+{
+	ProtoBuff* msgBuff = new ProtoBuff();
+	msgBuff->setMsgType(1);
+	msgBuff->setUserId("lg");
+	msgBuff->setUserPw("lg_password");
+	msgBuff->setAuthority(2);
+	msgBuff->setOperationMode(3);
+	msgBuff->setNumOfImage(0);
+
+	unsigned int imagesize;
+    cv::imencode(".jpg", Image, sendbuff, param);
+
+	msgBuff->setImage(sendbuff.size(), (const char*)sendbuff.data());
+	unsigned char* serializedData = msgBuff->serializeToArray();
+	size_t serializedSize = msgBuff->getSize();
+
+	imagesize = htonl(serializedSize);
+    if (WriteDataTcp(TcpConnectedPort,(unsigned char *)&imagesize,sizeof(imagesize))!=sizeof(imagesize))
+    return(-1);
+    return(WriteDataTcp(TcpConnectedPort, serializedData, serializedSize));
 }
 
 //-----------------------------------------------------------------

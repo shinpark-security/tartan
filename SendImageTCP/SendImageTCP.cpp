@@ -63,6 +63,7 @@ int main(int argc, char *argv[])
 	flip_method);
     std::cout << "Using pipeline: \n\t" << pipeline << "\n";
  
+    //cv::VideoCapture capture("/dev/video0");
     cv::VideoCapture capture(pipeline, cv::CAP_GSTREAMER);
     if(!capture.isOpened()) {
 	std::cout<<"Failed to open camera."<<std::endl;
@@ -116,7 +117,8 @@ int main(int argc, char *argv[])
 	
     // Send processed UDP image
     if (TcpSendImageAsJpeg(TcpConnectedPort,image)<0)  break;   
-	key = (waitKey(10) & 0xFF);
+	//key = (waitKey(10) & 0xFF);
+	key = (waitKey(1000) & 0xFF);
 	printf("%d\n",key);
    } while (key!= 'q'); // loop until user hits quit
 
