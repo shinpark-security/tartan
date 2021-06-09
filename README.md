@@ -9,3 +9,5 @@ Secure TCP port: 55555
 admin - Learning, running, testrun mode possible  
 lg - running, testrun mode possible
 
+#Limits  
+사람당 학습가능한 이미지샘플수 맥시멈: 5 (정면, 좌우,위아래)
