@@ -83,6 +83,8 @@ CComm::pause() {
     printf("CComm::pause()+ TLS=%d\n", tls_mode);
     if (!thread_run) return true;
     thread_pause=true;
+    close_tcp_connected_port(&TcpConnectedPort);
+    close_tcp_listen_port(&TcpListenPort);
     return true;
 }
 
@@ -236,8 +238,10 @@ CComm::comm_thread (gpointer data) {
                 }
                 if ( pollret > 0) {
                     try {
-                        ret=recv(pcom->TcpConnectedPort->ConnectedFd, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT);
-                        // ret=wolfSSL_recv(pcom->TcpConnectedPort->ssl, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT);
+                        if (pcom->tls_mode)
+                            ret=wolfSSL_recv(pcom->TcpConnectedPort->ssl, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT);
+                        else
+                            ret=recv(pcom->TcpConnectedPort->ConnectedFd, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT);
                         if (ret==0) {
                             printf("Check ERROR...............\n");
                             pcom->tcp_connected=false;
