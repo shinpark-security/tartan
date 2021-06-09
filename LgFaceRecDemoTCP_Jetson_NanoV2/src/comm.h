@@ -41,14 +41,16 @@ public:
 
     static gpointer comm_thread (gpointer data);
     gboolean send_msg_connected (gboolean connected);
-    static open_tcp_listen_port_func open_tcp_listen_port;
-    static close_tcp_listen_port_func close_tcp_listen_port;
-    static accept_tcp_connection_func accept_tcp_connection;
-    static close_tcp_connected_port_func close_tcp_connected_port;
-    static read_data_tcp_func read_data_tcp;
-    static write_data_tcp_func write_data_tcp;
-    static tcp_send_image_as_jpeg_func tcp_send_image_as_jpeg;
-    
+    open_tcp_listen_port_func open_tcp_listen_port;
+    close_tcp_listen_port_func close_tcp_listen_port;
+    accept_tcp_connection_func accept_tcp_connection;
+    close_tcp_connected_port_func close_tcp_connected_port;
+    read_data_tcp_func read_data_tcp;
+    write_data_tcp_func write_data_tcp;
+    tcp_send_image_as_jpeg_func tcp_send_image_as_jpeg;
+    gboolean thread_pause;
+    gboolean pause();
+    gboolean resume();
 private:
     GMutex lock;
     GAsyncQueue *main_queue;

@@ -4,13 +4,13 @@
 #include <sys/socket.h> 
 #include <sys/poll.h> 
 
-open_tcp_listen_port_func CComm::open_tcp_listen_port;
-close_tcp_listen_port_func CComm::close_tcp_listen_port;
-accept_tcp_connection_func CComm::accept_tcp_connection;
-close_tcp_connected_port_func CComm::close_tcp_connected_port;
-read_data_tcp_func CComm::read_data_tcp;
-write_data_tcp_func CComm::write_data_tcp;
-tcp_send_image_as_jpeg_func CComm::tcp_send_image_as_jpeg;
+// open_tcp_listen_port_func CComm::open_tcp_listen_port;
+// close_tcp_listen_port_func CComm::close_tcp_listen_port;
+// accept_tcp_connection_func CComm::accept_tcp_connection;
+// close_tcp_connected_port_func CComm::close_tcp_connected_port;
+// read_data_tcp_func CComm::read_data_tcp;
+// write_data_tcp_func CComm::write_data_tcp;
+// tcp_send_image_as_jpeg_func CComm::tcp_send_image_as_jpeg;
 
 CComm::CComm(gboolean tls, int port, GAsyncQueue *q) {
     tcp_connected=false;
@@ -18,8 +18,11 @@ CComm::CComm(gboolean tls, int port, GAsyncQueue *q) {
     main_queue=q;
     tcp_port=port;
     thread_run=false;
+    TcpConnectedPort=nullptr;
+    thread_pause=false;
     g_mutex_init(&lock);
     if (tls) {
+        printf("TLS MODE\n");
         open_tcp_listen_port=OpenTcpListenPortTLS;
         close_tcp_listen_port=CloseTcpListenPortTLS;
         accept_tcp_connection=AcceptTcpConnectionTLS;
@@ -28,6 +31,7 @@ CComm::CComm(gboolean tls, int port, GAsyncQueue *q) {
         write_data_tcp=WriteDataTcpTLS;
         tcp_send_image_as_jpeg=TcpSendImageAsJpegTLS;
     } else {
+        printf("NON TLS MODE\n");
         open_tcp_listen_port=OpenTcpListenPort;
         close_tcp_listen_port=CloseTcpListenPort;
         accept_tcp_connection=AcceptTcpConnection;
@@ -48,7 +52,7 @@ gboolean
 CComm::start() {
     if (thread_run)
         return true;
-    printf("comm-start()+\n");
+    printf("comm-start()+  TLS=%d\n", tls_mode);
     thread_run=true;
     thread = g_thread_new ("comm_thread", comm_thread, this);
     if (thread != nullptr)  {
@@ -59,17 +63,41 @@ CComm::start() {
 
 gboolean
 CComm::stop() {
+    printf("CComm::stop()+ TLS=%d\n", tls_mode);
     if (!thread_run) return true;
+    printf("trying to close the port\n");
     thread_run=false;
+    // close(TcpListenPort->ListenFd);
+    close_tcp_listen_port(&TcpListenPort);
+    printf("closed and wait for thread join.\n");
     (void)g_thread_join(thread);
+    printf("thread join finished\n");
     thread=nullptr;
+    printf("CComm::stop()-\n");
     return true;
 }
 
 gboolean
+CComm::pause() {
+    printf("CComm::pause()+ TLS=%d\n", tls_mode);
+    if (!thread_run) return true;
+    thread_pause=true;
+    return true;
+}
+
+gboolean
+CComm::resume() {
+    printf("comm-resume()+  TLS=%d\n", tls_mode);
+    if (!thread_run) return true;
+    thread_pause=false;
+    return true;
+}
+
+
+gboolean
 CComm::connection_wait(void) {
     clilen = sizeof(cli_addr);
-    printf("Listening for connections   port=%d\n", tcp_port);
+    printf("Listening for connections   port=%d TLS Mode=%d\n", tcp_port, tls_mode);
 
 	if  ((TcpConnectedPort=accept_tcp_connection(TcpListenPort,&cli_addr,&clilen))==NULL)
 	{  
@@ -137,9 +165,10 @@ CComm::send_response(const unsigned char *buff, size_t len) {
 
 gboolean 
 CComm::send_msg_connected (gboolean connected) {
+    printf("Connection Msg sent..TLS=%d\n", tls_mode);
     if (main_queue) {
         MyMsg *pmsg = new MyMsg;
-        pmsg->msgid= connected ? MYMSG_NET_CONNECTED : MYMSG_NET_CONNECTED;
+        pmsg->msgid= connected ? MYMSG_NET_CONNECTED : MYMSG_NET_DISCONNECTED;
         pmsg->arg1= tls_mode;
         pmsg->pdata=this;
         g_async_queue_push (main_queue, pmsg );
@@ -149,28 +178,33 @@ CComm::send_msg_connected (gboolean connected) {
 
 gpointer 
 CComm::comm_thread (gpointer data) {
-    printf("comm_thread()+");
+    printf("comm_thread()+\n");
     CComm *pcom=(CComm*)data;
-    if  ((pcom->TcpListenPort=CComm::open_tcp_listen_port(pcom->tcp_port))==NULL)  // Open TCP Network port
+    if  ((pcom->TcpListenPort=pcom->open_tcp_listen_port(pcom->tcp_port))==NULL)  // Open TCP Network port
     {
         printf("open_tcp_listen_port Failed\n");
         return(nullptr); 
     }
 
     while(pcom->thread_run) {
+        if (pcom->thread_pause) {
+            sleep(1);
+            printf("thread paused... TLS=%d\n",pcom->tls_mode);
+            continue;
+        }
 
-
+        // printf("comthread:tls=%d", pcom->tls_mode);
         if (!pcom->tcp_connected) {
             printf("wait for connection..\n");
             try {
                 if (pcom->connection_wait()) {
                     pcom->tcp_connected=true;
                     pcom->send_msg_connected(true);
-                    printf("Connected.........................\n");
+                    printf("Connected.........................TLS=%d\n",pcom->tls_mode);
                 }
             }
             catch (int ex) {
-                    printf("connection_wait Exception...%d\n",ex);
+                    printf("connection_wait Exception...%d.. and.TLS=%d\n",ex,pcom->tls_mode);
                     pcom->tcp_connected=false;
                     pcom->close_tcp_connected_port(&pcom->TcpConnectedPort);
                     pcom->send_msg_connected(false);
@@ -201,12 +235,13 @@ CComm::comm_thread (gpointer data) {
                 }
                 if ( pollret > 0) {
                     try {
-                        ret=wolfSSL_recv(pcom->TcpConnectedPort->ssl, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT);
+                        ret=recv(pcom->TcpConnectedPort->ConnectedFd, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT);
+                        // ret=wolfSSL_recv(pcom->TcpConnectedPort->ssl, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT);
                         if (ret==0) {
                             printf("Check ERROR...............\n");
                             pcom->tcp_connected=false;
                             pcom->send_msg_connected(false);
-                            close_tcp_connected_port(&pcom->TcpConnectedPort);
+                            pcom->close_tcp_connected_port(&pcom->TcpConnectedPort);
                         }
                         if (ret>0) {
                             ret=pcom->read_data_tcp(pcom->TcpConnectedPort,buffer,PACKET_SIZE);

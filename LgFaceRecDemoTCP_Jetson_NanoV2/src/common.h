@@ -71,7 +71,7 @@ calculateBindingBufferSizes(const nvinfer1::ICudaEngine& engine, int nbBindings,
 void getFilePaths(std::string imagesPath, std::vector<struct Paths>& paths);
 void loadInputImage(std::string inputFilePath, cv::Mat& image, int videoFrameWidth, int videoFrameHeight);
 
-#define TCP_PORT_NON_SECURE 50000
+#define TCP_PORT_NON_SECURE 55000
 #define TCP_PORT_SECURE 	55555
 
 #endif // _TRT_COMMON_H_

@@ -92,16 +92,20 @@ gpointer main_thread (gpointer data) {
 				}
 				break;
 				case MYMSG_NET_CONNECTED: {
-					printf(".");
+					printf("MYMSG_NET_CONNECTED\n");
+					// printf("pcom=%p  pdata=%p\n",psbd->pcom, pmsg->pdata);
 					if (psbd->pcom==pmsg->pdata)
-						psbd->pcom_tls->stop();
+						psbd->pcom_tls->pause();
 					else 
-						psbd->pcom->stop();
+						psbd->pcom->pause();
 				}
 				break;
 				case MYMSG_NET_DISCONNECTED: {
-					psbd->pcom->start();
-					psbd->pcom_tls->start();
+					printf("MYMSG_NET_DISCONNECTED\n");
+					if (psbd->pcom==pmsg->pdata)
+						psbd->pcom_tls->resume();
+					else 
+						psbd->pcom->resume();
 				}
 				break;
 			}
