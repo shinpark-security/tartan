@@ -16,6 +16,15 @@ static  std::vector<uchar> sendbuff;//buffer for coding
 // jpeg image in side a TCP Stream on the specified TCP local port
 // and Destination. return bytes sent on success and -1 on failure
 //-----------------------------------------------------------------
+int TcpSendImageAsJpegTLS(TTcpConnectedPort * TcpConnectedPort,cv::Mat Image)
+{
+    unsigned int imagesize;
+    cv::imencode(".jpg", Image, sendbuff, param);
+    imagesize=htonl(sendbuff.size()); // convert image size to network format
+	if (WriteDataTcpTLS(TcpConnectedPort,(unsigned char *)&imagesize,sizeof(imagesize))!=sizeof(imagesize))
+		return(-1);
+    return(WriteDataTcpTLS(TcpConnectedPort,sendbuff.data(), sendbuff.size()));
+}
 int TcpSendImageAsJpeg(TTcpConnectedPort * TcpConnectedPort,cv::Mat Image)
 {
     unsigned int imagesize;

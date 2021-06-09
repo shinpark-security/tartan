@@ -28,6 +28,12 @@ typedef SSIZE_T ssize_t;
 #define  CLOSE_SOCKET close
 #define  SOCKET_FD_TYPE int
 #define  BAD_SOCKET_FD  -1
+/* wolfSSL */
+#include <wolfssl/options.h>
+#include <wolfssl/ssl.h>
+#include <wolfssl/wolfio.h>
+#define CERT_FILE "../certs/server-cert.pem"
+#define KEY_FILE  "../certs/server-key.pem"
 #endif
 
 //------------------------------------------------------------------------------------------------
@@ -37,24 +43,33 @@ typedef SSIZE_T ssize_t;
 typedef struct
 {
  SOCKET_FD_TYPE ListenFd;
+ WOLFSSL_CTX* ctx;
 } TTcpListenPort;
 
 typedef struct
 {
  SOCKET_FD_TYPE ConnectedFd;
+ WOLFSSL* ssl;
 } TTcpConnectedPort;
 
 //------------------------------------------------------------------------------------------------
 //  Function Prototypes 
 //------------------------------------------------------------------------------------------------
 TTcpListenPort *OpenTcpListenPort(short localport);
+TTcpListenPort *OpenTcpListenPortTLS(short localport);
 void CloseTcpListenPort(TTcpListenPort **TcpListenPort);
+void CloseTcpListenPortTLS(TTcpListenPort **TcpListenPort);
 TTcpConnectedPort *AcceptTcpConnection(TTcpListenPort *TcpListenPort, 
+                       struct sockaddr_in *cli_addr,socklen_t *clilen);
+TTcpConnectedPort *AcceptTcpConnectionTLS(TTcpListenPort *TcpListenPort, 
                        struct sockaddr_in *cli_addr,socklen_t *clilen);
 TTcpConnectedPort *OpenTcpConnection(const char *remotehostname, const char * remoteportno);
 void CloseTcpConnectedPort(TTcpConnectedPort **TcpConnectedPort);
+void CloseTcpConnectedPortTLS(TTcpConnectedPort **TcpConnectedPort);
 ssize_t ReadDataTcp(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, size_t length);
+ssize_t ReadDataTcpTLS(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, size_t length);
 ssize_t WriteDataTcp(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, size_t length);
+ssize_t WriteDataTcpTLS(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, size_t length);
 #endif
 //------------------------------------------------------------------------------------------------
 //END of Include

@@ -84,4 +84,4 @@ target_link_libraries(${PROJECT_NAME}
   ${TENSORRT_LIBRARY}
   ${pkgs_LDFLAGS}
 )
-target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS}) 
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} wolfssl) 

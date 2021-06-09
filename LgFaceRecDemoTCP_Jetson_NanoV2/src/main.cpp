@@ -15,7 +15,6 @@
 #include "imgproc.h"
 #include "comm.h"
 
-
 gboolean thread_start(tServiceData *psbd);
 gboolean thread_stop(tServiceData *psbd);
 static gboolean on_handle_sigterm(gpointer pUserData);
@@ -61,7 +60,7 @@ gpointer main_thread (gpointer data) {
 	if (data==nullptr) return nullptr;
 	tServiceData *psbd=(tServiceData *)data;
 
-	psbd->pcom->start(psbd->tcp_port,psbd->queue);
+	psbd->pcom->start(psbd->tls_port,psbd->queue);
 	psbd->pimgproc->start(psbd->queue);
 
 	while(psbd->thread_run) {
@@ -140,7 +139,8 @@ int main(int argc, char *argv[])
 	if (sbd.mainloop !=nullptr) {
 		guint sig1,sig2;
 
-		sbd.tcp_port=2000;
+		sbd.tcp_port = TCP_PORT_NON_SECURE;
+		sbd.tls_port = TCP_PORT_SECURE;
 		// (void)configureWdogTimer(psbd);
 
 		if (thread_start(&sbd)) {

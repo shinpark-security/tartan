@@ -14,6 +14,102 @@
 // OpenTCPListenPort - Creates a Listen TCP port to accept
 // connection requests
 //-----------------------------------------------------------------
+TTcpListenPort *OpenTcpListenPortTLS(short localport)
+{
+	TTcpListenPort *TcpListenPort;
+	struct sockaddr_in myaddr;
+
+	TcpListenPort= new (std::nothrow) TTcpListenPort;  
+
+	if (TcpListenPort==NULL)
+	{
+		fprintf(stderr, "TUdpPort memory allocation failed\n");
+		return(NULL);
+	}
+	TcpListenPort->ListenFd=BAD_SOCKET_FD;
+#if  defined(_WIN32) || defined(_WIN64)
+	WSADATA wsaData;
+	int     iResult;
+	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (iResult != 0) 
+	{
+		delete TcpListenPort;
+		printf("WSAStartup failed: %d\n", iResult);
+		return(NULL);
+	}
+#endif
+
+	/* declare wolfSSL objects */
+	TcpListenPort->ctx = NULL;
+
+    /* Initialize wolfSSL */
+    wolfSSL_Init();
+
+	// create a socket
+	if ((TcpListenPort->ListenFd= socket(AF_INET, SOCK_STREAM, 0)) == BAD_SOCKET_FD)
+	{
+		CloseTcpListenPortTLS(&TcpListenPort);
+		perror("socket failed");
+		return(NULL);  
+	}
+	int option = 1; 
+
+	if(setsockopt(TcpListenPort->ListenFd,SOL_SOCKET,SO_REUSEADDR,(char*)&option,sizeof(option)) < 0)
+	{
+		CloseTcpListenPortTLS(&TcpListenPort);
+		perror("setsockopt failed");
+		return(NULL);
+	}
+
+	/* Create and initialize WOLFSSL_CTX */
+	if ((TcpListenPort->ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method())) == NULL) {
+		perror("ERROR: failed to create WOLFSSL_CTX");
+		CloseTcpListenPortTLS(&TcpListenPort);
+		return(NULL);
+	}
+
+	/* Load server certificates into WOLFSSL_CTX */
+	if (wolfSSL_CTX_use_certificate_file(TcpListenPort->ctx, CERT_FILE, WOLFSSL_FILETYPE_PEM)
+			!= WOLFSSL_SUCCESS) {
+		fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
+				CERT_FILE);
+		CloseTcpListenPortTLS(&TcpListenPort);
+		return(NULL);
+	}
+
+	/* Load server key into WOLFSSL_CTX */
+	if (wolfSSL_CTX_use_PrivateKey_file(TcpListenPort->ctx, KEY_FILE, WOLFSSL_FILETYPE_PEM)
+			!= WOLFSSL_SUCCESS) {
+		fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
+				KEY_FILE);
+		CloseTcpListenPortTLS(&TcpListenPort);
+		return(NULL);
+	}
+
+	// bind it to all local addresses and pick any port number
+	memset((char *)&myaddr, 0, sizeof(myaddr));
+	myaddr.sin_family = AF_INET;
+	myaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	myaddr.sin_port = htons(localport);
+
+	if (bind(TcpListenPort->ListenFd, (struct sockaddr *)&myaddr, sizeof(myaddr)) < 0)
+	{
+		CloseTcpListenPortTLS(&TcpListenPort);
+		perror("bind failed");
+		return(NULL); 
+	}
+
+
+	if (listen(TcpListenPort->ListenFd,5)< 0)
+	{
+		CloseTcpListenPortTLS(&TcpListenPort);
+		perror("bind failed");
+		return(NULL);	  
+	}
+
+	printf("Listing Success..\n");
+	return(TcpListenPort);
+}
 TTcpListenPort *OpenTcpListenPort(short localport)
 {
 	TTcpListenPort *TcpListenPort;
@@ -82,6 +178,26 @@ TTcpListenPort *OpenTcpListenPort(short localport)
 //-----------------------------------------------------------------
 // CloseTcpListenPort - Closes the specified TCP listen port
 //-----------------------------------------------------------------
+void CloseTcpListenPortTLS(TTcpListenPort **TcpListenPort)
+{
+	if ((*TcpListenPort)==NULL) return;
+
+	if ((*TcpListenPort)->ListenFd!=BAD_SOCKET_FD)  
+	{
+		CLOSE_SOCKET((*TcpListenPort)->ListenFd);
+		(*TcpListenPort)->ListenFd=BAD_SOCKET_FD;
+	}
+
+	if((*TcpListenPort)->ctx)
+		wolfSSL_CTX_free((*TcpListenPort)->ctx);
+
+	delete (*TcpListenPort);
+	(*TcpListenPort)=NULL;
+#if  defined(_WIN32) || defined(_WIN64)
+	WSACleanup();
+#endif
+	wolfSSL_Cleanup();
+}
 void CloseTcpListenPort(TTcpListenPort **TcpListenPort)
 {
 	if ((*TcpListenPort)==NULL) return;
@@ -103,6 +219,66 @@ void CloseTcpListenPort(TTcpListenPort **TcpListenPort)
 // AcceptTcpConnection -Accepts a TCP Connection request from a 
 // Listening port
 //-----------------------------------------------------------------
+TTcpConnectedPort *AcceptTcpConnectionTLS(TTcpListenPort *TcpListenPort, 
+		struct sockaddr_in *cli_addr,socklen_t *clilen)
+{
+	TTcpConnectedPort *TcpConnectedPort;
+	int ret = 0;
+
+	TcpConnectedPort= new (std::nothrow) TTcpConnectedPort;  
+
+	if (TcpConnectedPort==NULL)
+	{
+		fprintf(stderr, "TUdpPort memory allocation failed\n");
+		return(NULL);
+	}
+	
+	TcpConnectedPort->ConnectedFd= accept(TcpListenPort->ListenFd,
+			(struct sockaddr *) cli_addr,clilen);
+
+	if (TcpConnectedPort->ConnectedFd== BAD_SOCKET_FD) 
+	{
+		perror("ERROR on accept");
+		delete TcpConnectedPort;
+		return NULL;
+	}
+
+	int bufsize = 200 * 1024;
+	if (setsockopt(TcpConnectedPort->ConnectedFd, SOL_SOCKET, 
+				SO_RCVBUF, (char *)&bufsize, sizeof(bufsize)) == -1)
+	{
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		perror("setsockopt SO_SNDBUF failed");
+		return(NULL);
+	}
+	if (setsockopt(TcpConnectedPort->ConnectedFd, SOL_SOCKET, 
+				SO_SNDBUF, (char *)&bufsize, sizeof(bufsize)) == -1)
+	{
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		perror("setsockopt SO_SNDBUF failed");
+		return(NULL);
+	}
+
+	/* Create a WOLFSSL object */
+	if ((TcpConnectedPort->ssl = wolfSSL_new(TcpListenPort->ctx)) == NULL) {
+		perror("ERROR: failed to create WOLFSSL object");
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		return(NULL);
+	}
+
+	/* Attach wolfSSL to the socket */
+	wolfSSL_set_fd(TcpConnectedPort->ssl, TcpConnectedPort->ConnectedFd);
+
+	/* Establish TLS connection */
+	if ((ret = wolfSSL_accept(TcpConnectedPort->ssl)) != WOLFSSL_SUCCESS) {
+		fprintf(stderr, "wolfSSL_accept error = %d\n",
+				wolfSSL_get_error(TcpConnectedPort->ssl, ret));
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		return(NULL);
+	}
+
+	return TcpConnectedPort;
+}
 TTcpConnectedPort *AcceptTcpConnection(TTcpListenPort *TcpListenPort, 
 		struct sockaddr_in *cli_addr,socklen_t *clilen)
 {
@@ -237,6 +413,24 @@ TTcpConnectedPort *OpenTcpConnection(const char *remotehostname, const char * re
 //-----------------------------------------------------------------
 // CloseTcpConnectedPort - Closes the specified TCP connected port
 //-----------------------------------------------------------------
+void CloseTcpConnectedPortTLS(TTcpConnectedPort **TcpConnectedPort)
+{
+	if ((*TcpConnectedPort)==NULL) return;
+
+	if((*TcpConnectedPort)->ssl)
+		wolfSSL_free((*TcpConnectedPort)->ssl);
+
+	if ((*TcpConnectedPort)->ConnectedFd!=BAD_SOCKET_FD)  
+	{
+		CLOSE_SOCKET((*TcpConnectedPort)->ConnectedFd);
+		(*TcpConnectedPort)->ConnectedFd=BAD_SOCKET_FD;
+	}
+	delete (*TcpConnectedPort);
+	(*TcpConnectedPort)=NULL;
+#if  defined(_WIN32) || defined(_WIN64)
+	WSACleanup();
+#endif
+}
 void CloseTcpConnectedPort(TTcpConnectedPort **TcpConnectedPort)
 {
 	if ((*TcpConnectedPort)==NULL) return;
@@ -257,6 +451,19 @@ void CloseTcpConnectedPort(TTcpConnectedPort **TcpConnectedPort)
 //-----------------------------------------------------------------
 // ReadDataTcp - Reads the specified amount TCP data 
 //-----------------------------------------------------------------
+ssize_t ReadDataTcpTLS(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, size_t length)
+{
+	ssize_t bytes;
+
+	for (size_t i = 0; i < length; i += bytes)
+	{
+		if ((bytes = wolfSSL_recv(TcpConnectedPort->ssl, (char *)(data+i), length  - i,0)) == -1) 
+		{
+			return (-1);
+		}
+	}
+	return(length);
+}
 ssize_t ReadDataTcp(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, size_t length)
 {
 	ssize_t bytes;
@@ -276,6 +483,23 @@ ssize_t ReadDataTcp(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, siz
 //-----------------------------------------------------------------
 // WriteDataTcp - Writes the specified amount TCP data 
 //-----------------------------------------------------------------
+ssize_t WriteDataTcpTLS(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, size_t length)
+{
+	ssize_t total_bytes_written = 0;
+	ssize_t bytes_written;
+	while (total_bytes_written != length)
+	{
+		bytes_written = wolfSSL_send(TcpConnectedPort->ssl,
+				(char *)(data+total_bytes_written),
+				length - total_bytes_written,0);
+		if (bytes_written == -1)
+		{
+			return(-1);
+		}
+		total_bytes_written += bytes_written;
+	}
+	return(total_bytes_written);
+}
 ssize_t WriteDataTcp(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, size_t length)
 {
 	ssize_t total_bytes_written = 0;
