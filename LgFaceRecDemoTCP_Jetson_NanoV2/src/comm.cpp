@@ -83,8 +83,11 @@ CComm::pause() {
     printf("CComm::pause()+ TLS=%d\n", tls_mode);
     if (!thread_run) return true;
     thread_pause=true;
-    close_tcp_connected_port(&TcpConnectedPort);
-    close_tcp_listen_port(&TcpListenPort);
+    // printf("1\n");
+    // close_tcp_connected_port(&TcpConnectedPort);
+    // printf("2\n");
+    // close_tcp_listen_port(&TcpListenPort);
+    // printf("3\n");
     return true;
 }
 
@@ -209,7 +212,7 @@ CComm::comm_thread (gpointer data) {
             catch (int ex) {
                     printf("connection_wait Exception...%d.. and.TLS=%d\n",ex,pcom->tls_mode);
                     pcom->tcp_connected=false;
-                    pcom->close_tcp_connected_port(&pcom->TcpConnectedPort);
+                    pcom->close_tcp_listen_port(&pcom->TcpListenPort);
                     pcom->send_msg_connected(false);
                     continue;
             }
