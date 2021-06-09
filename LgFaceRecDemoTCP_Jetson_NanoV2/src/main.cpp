@@ -75,7 +75,10 @@ gpointer main_thread (gpointer data) {
 			switch(pmsg->msgid) {
 				case MYMSG_FRAME: {
 					printf(".");
-					psbd->pcom->send_jpg(pmsg->mat);
+					if (psbd->pcom->thread_run)
+						psbd->pcom->send_jpg(pmsg->mat);
+					else 
+						psbd->pcom_tls->send_jpg(pmsg->mat);
 					pmsg->mat.release();
 				}
 				break;
