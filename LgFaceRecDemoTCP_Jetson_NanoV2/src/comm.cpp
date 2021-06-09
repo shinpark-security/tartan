@@ -68,6 +68,7 @@ CComm::stop() {
     printf("trying to close the port\n");
     thread_run=false;
     // close(TcpListenPort->ListenFd);
+    close_tcp_connected_port(&TcpConnectedPort);
     close_tcp_listen_port(&TcpListenPort);
     printf("closed and wait for thread join.\n");
     (void)g_thread_join(thread);
