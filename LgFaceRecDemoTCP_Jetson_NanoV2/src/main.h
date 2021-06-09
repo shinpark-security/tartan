@@ -6,16 +6,18 @@
 #include "comm.h"
 #include "auth.h"
 #include "imgproc.h"
+#include <list>
+using namespace std;
 
 typedef struct {
+    // list <CComm *> list_com;
     CComm *pcom;
+    CComm *pcom_tls;
     CImgProc *pimgproc;
     gboolean thread_run;
     GThread *main_thread;
     GAsyncQueue *queue;
     GMainLoop *mainloop;
-    int tcp_port;
-    int tls_port;
     static gpointer service_main (gpointer data);
 } tServiceData;
 

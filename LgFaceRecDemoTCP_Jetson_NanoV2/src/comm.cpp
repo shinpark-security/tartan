@@ -4,10 +4,38 @@
 #include <sys/socket.h> 
 #include <sys/poll.h> 
 
-CComm::CComm() {
+open_tcp_listen_port_func CComm::open_tcp_listen_port;
+close_tcp_listen_port_func CComm::close_tcp_listen_port;
+accept_tcp_connection_func CComm::accept_tcp_connection;
+close_tcp_connected_port_func CComm::close_tcp_connected_port;
+read_data_tcp_func CComm::read_data_tcp;
+write_data_tcp_func CComm::write_data_tcp;
+tcp_send_image_as_jpeg_func CComm::tcp_send_image_as_jpeg;
+
+CComm::CComm(gboolean tls, int port, GAsyncQueue *q) {
     tcp_connected=false;
+    tls_mode=tls;
+    main_queue=q;
+    tcp_port=port;
+    thread_run=false;
     g_mutex_init(&lock);
- 
+    if (tls) {
+        open_tcp_listen_port=OpenTcpListenPortTLS;
+        close_tcp_listen_port=CloseTcpListenPortTLS;
+        accept_tcp_connection=AcceptTcpConnectionTLS;
+        close_tcp_connected_port=CloseTcpConnectedPortTLS;
+        read_data_tcp=ReadDataTcpTLS;
+        write_data_tcp=WriteDataTcpTLS;
+        tcp_send_image_as_jpeg=TcpSendImageAsJpegTLS;
+    } else {
+        open_tcp_listen_port=OpenTcpListenPort;
+        close_tcp_listen_port=CloseTcpListenPort;
+        accept_tcp_connection=AcceptTcpConnection;
+        close_tcp_connected_port=CloseTcpConnectedPort;
+        read_data_tcp=ReadDataTcp;
+        write_data_tcp=WriteDataTcp;
+        tcp_send_image_as_jpeg=TcpSendImageAsJpeg;
+    } 
 }
 
 CComm::~CComm() {
@@ -17,11 +45,33 @@ CComm::~CComm() {
 
 
 gboolean
+CComm::start() {
+    if (thread_run)
+        return true;
+    printf("comm-start()+\n");
+    thread_run=true;
+    thread = g_thread_new ("comm_thread", comm_thread, this);
+    if (thread != nullptr)  {
+        return true;
+    }
+    return false;
+}
+
+gboolean
+CComm::stop() {
+    if (!thread_run) return true;
+    thread_run=false;
+    (void)g_thread_join(thread);
+    thread=nullptr;
+    return true;
+}
+
+gboolean
 CComm::connection_wait(void) {
     clilen = sizeof(cli_addr);
     printf("Listening for connections   port=%d\n", tcp_port);
 
-	if  ((TcpConnectedPort=AcceptTcpConnectionTLS(TcpListenPort,&cli_addr,&clilen))==NULL)
+	if  ((TcpConnectedPort=accept_tcp_connection(TcpListenPort,&cli_addr,&clilen))==NULL)
 	{  
 		printf("AcceptTcpConnection Failed\n");
 		return false;
@@ -40,7 +90,7 @@ CComm::send_jpg(const cv::Mat frame) {
     int sents=0;
     try {
         // printf("sending...\n");
-        sents=TcpSendImageAsJpegTLS(TcpConnectedPort,frame);
+        sents=tcp_send_image_as_jpeg(TcpConnectedPort,frame);
         // printf("sent...%d\n",sents);
         if (sents<0)  {
             tcp_connected=false;
@@ -48,9 +98,9 @@ CComm::send_jpg(const cv::Mat frame) {
         }    
     }
     catch (int ex) {
-        printf("TcpSendImageAsJpeg Exception...%d\n",ex);
+        printf("tcp_send_image_as_jpeg Exception...%d\n",ex);
         tcp_connected=ret;
-        CloseTcpConnectedPortTLS(&TcpConnectedPort);
+        close_tcp_connected_port(&TcpConnectedPort);
         ret=false;
     }   
     g_mutex_unlock (&lock);
@@ -67,7 +117,7 @@ CComm::send_response(const unsigned char *buff, size_t len) {
     int sents=0;
     try {
         // printf("sending...\n");
-        sents=WriteDataTcpTLS(TcpConnectedPort,(unsigned char*)buff,(size_t)len);
+        sents=write_data_tcp(TcpConnectedPort,(unsigned char*)buff,(size_t)len);
         // printf("sent...%d\n",sents);
         if (sents<0)  {
             tcp_connected=false;
@@ -77,20 +127,33 @@ CComm::send_response(const unsigned char *buff, size_t len) {
     catch (int ex) {
         printf("send_response Exception...%d\n",ex);
         tcp_connected=ret;
-        CloseTcpConnectedPortTLS(&TcpConnectedPort);
+        close_tcp_connected_port(&TcpConnectedPort);
         ret=false;
     }   
     g_mutex_unlock (&lock);
 
     return ret;
 }
+
+gboolean 
+CComm::send_msg_connected (gboolean connected) {
+    if (main_queue) {
+        MyMsg *pmsg = new MyMsg;
+        pmsg->msgid= connected ? MYMSG_NET_CONNECTED : MYMSG_NET_CONNECTED;
+        pmsg->arg1= tls_mode;
+        pmsg->pdata=this;
+        g_async_queue_push (main_queue, pmsg );
+    }
+    return true;
+}
+
 gpointer 
 CComm::comm_thread (gpointer data) {
     printf("comm_thread()+");
     CComm *pcom=(CComm*)data;
-    if  ((pcom->TcpListenPort=OpenTcpListenPortTLS(pcom->tcp_port))==NULL)  // Open TCP Network port
+    if  ((pcom->TcpListenPort=CComm::open_tcp_listen_port(pcom->tcp_port))==NULL)  // Open TCP Network port
     {
-        printf("OpenTcpListenPortTLSFailed\n");
+        printf("open_tcp_listen_port Failed\n");
         return(nullptr); 
     }
 
@@ -102,13 +165,15 @@ CComm::comm_thread (gpointer data) {
             try {
                 if (pcom->connection_wait()) {
                     pcom->tcp_connected=true;
+                    pcom->send_msg_connected(true);
                     printf("Connected.........................\n");
                 }
             }
             catch (int ex) {
                     printf("connection_wait Exception...%d\n",ex);
                     pcom->tcp_connected=false;
-                    CloseTcpConnectedPortTLS(&pcom->TcpConnectedPort);
+                    pcom->close_tcp_connected_port(&pcom->TcpConnectedPort);
+                    pcom->send_msg_connected(false);
                     continue;
             }
         } else {
@@ -131,7 +196,8 @@ CComm::comm_thread (gpointer data) {
                 catch (int ex) {
                     printf("Poll Exception...%d\n",ex);
                     pcom->tcp_connected=false;
-                    CloseTcpConnectedPortTLS(&pcom->TcpConnectedPort);
+                    pcom->send_msg_connected(false);
+                    pcom->close_tcp_connected_port(&pcom->TcpConnectedPort);
                 }
                 if ( pollret > 0) {
                     try {
@@ -139,10 +205,11 @@ CComm::comm_thread (gpointer data) {
                         if (ret==0) {
                             printf("Check ERROR...............\n");
                             pcom->tcp_connected=false;
-                            CloseTcpConnectedPort(&pcom->TcpConnectedPort);
+                            pcom->send_msg_connected(false);
+                            close_tcp_connected_port(&pcom->TcpConnectedPort);
                         }
                         if (ret>0) {
-                            ret=ReadDataTcpTLS(pcom->TcpConnectedPort,buffer,PACKET_SIZE);
+                            ret=pcom->read_data_tcp(pcom->TcpConnectedPort,buffer,PACKET_SIZE);
                             // printf("bytes=%d, data=[%10s]\n", ret, buffer);     
                             if (pcom->main_queue) {
                                 MyMsg *pmsg = new MyMsg;
@@ -156,8 +223,8 @@ CComm::comm_thread (gpointer data) {
                     catch (int ex) {
                         printf("Exception...%d\n",ex);
                         pcom->tcp_connected=false;
-                        CloseTcpConnectedPortTLS(&pcom->TcpConnectedPort);
-
+                        pcom->send_msg_connected(false);
+                        pcom->close_tcp_connected_port(&pcom->TcpConnectedPort);
                     }
                     
                 }
@@ -169,27 +236,5 @@ CComm::comm_thread (gpointer data) {
         // printf("comm thread...\n");
     }
     printf("comm_thread()-");
-	CloseTcpListenPortTLS(&pcom->TcpListenPort);
-}
-
-gboolean
-CComm::start(int port, GAsyncQueue *q) {
-    printf("comm-start()+\n");
-    main_queue=q;
-    tcp_port=port;
-    thread_run=true;
-
-    thread = g_thread_new ("comm_thread", comm_thread, this);
-    if (thread != nullptr)  {
-        return true;
-    }
-    return false;
-}
-
-gboolean
-CComm::stop() {
-    if (!thread_run) return true;
-    thread_run=false;
-    (void)g_thread_join(thread);
-    return true;
+	pcom->close_tcp_listen_port(&pcom->TcpListenPort);
 }
