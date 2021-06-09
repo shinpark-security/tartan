@@ -77,7 +77,7 @@ gpointer main_thread (gpointer data) {
 					printf(".");
 					if (psbd->pcom->thread_run)
 						psbd->pcom->send_jpg(pmsg->mat);
-					else 
+					if (psbd->pcom_tls->thread_run)
 						psbd->pcom_tls->send_jpg(pmsg->mat);
 					pmsg->mat.release();
 				}
@@ -94,18 +94,18 @@ gpointer main_thread (gpointer data) {
 				case MYMSG_NET_CONNECTED: {
 					printf("MYMSG_NET_CONNECTED\n");
 					// printf("pcom=%p  pdata=%p\n",psbd->pcom, pmsg->pdata);
-					if (psbd->pcom==pmsg->pdata)
-						psbd->pcom_tls->pause();
-					else 
-						psbd->pcom->pause();
+					// if (psbd->pcom==pmsg->pdata)
+					// 	psbd->pcom_tls->pause();
+					// else 
+					// 	psbd->pcom->pause();
 				}
 				break;
 				case MYMSG_NET_DISCONNECTED: {
 					printf("MYMSG_NET_DISCONNECTED\n");
-					if (psbd->pcom==pmsg->pdata)
-						psbd->pcom_tls->resume();
-					else 
-						psbd->pcom->resume();
+					// if (psbd->pcom==pmsg->pdata)
+					// 	psbd->pcom_tls->resume();
+					// else 
+					// 	psbd->pcom->resume();
 				}
 				break;
 			}
