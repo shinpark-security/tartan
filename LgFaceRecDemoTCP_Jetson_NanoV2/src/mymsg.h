@@ -8,6 +8,8 @@ typedef enum {
     MYMSG_NONE=0,
     MYMSG_FRAME=1,
     MYMSG_CONTROL=2,
+    MYMSG_NET_CONNECTED=3,
+    MYMSG_NET_DISCONNECTED=4,
 } _e_MSG_ID;
 
 typedef struct {

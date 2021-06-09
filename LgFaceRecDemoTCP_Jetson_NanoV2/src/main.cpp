@@ -14,6 +14,7 @@
 #include "main.h"
 #include "imgproc.h"
 #include "comm.h"
+#include "mydb.h"
 
 gboolean thread_start(tServiceData *psbd);
 gboolean thread_stop(tServiceData *psbd);
@@ -46,7 +47,6 @@ gboolean thread_start(tServiceData *psbd)
 	printf("thread_start()+\n");
 	if (psbd != nullptr) {
 		//     psbd->pworker_msg_handler = worker_msg_handler;
-		psbd->queue = g_async_queue_new ();
 		psbd->thread_run=true;
 		psbd->main_thread = g_thread_new ("main_thread", main_thread, psbd);
 		if (psbd->main_thread != nullptr) {
@@ -60,7 +60,8 @@ gpointer main_thread (gpointer data) {
 	if (data==nullptr) return nullptr;
 	tServiceData *psbd=(tServiceData *)data;
 
-	psbd->pcom->start(psbd->tls_port,psbd->queue);
+	psbd->pcom->start();
+	psbd->pcom_tls->start();
 	psbd->pimgproc->start(psbd->queue);
 
 	while(psbd->thread_run) {
@@ -73,20 +74,33 @@ gpointer main_thread (gpointer data) {
 		if (pmsg) {
 			switch(pmsg->msgid) {
 				case MYMSG_FRAME: {
-									  printf(".");
-									  psbd->pcom->send_jpg(pmsg->mat);
-									  pmsg->mat.release();
-								  }
-								  break;
+					printf(".");
+					psbd->pcom->send_jpg(pmsg->mat);
+					pmsg->mat.release();
+				}
+				break;
 				case MYMSG_CONTROL: {
-										// printf("MSG:%d\n",pmsg->msgid);
-										char* cmd=(char*)pmsg->pdata;
-										printf("CONTROL MESSAGE RECEIVED: %10s\n",cmd);
-										// psbd->pcom->send_response((const unsigned char *)"response",5);
-										// psbd->pimgproc->add_new_user("dolmangi");
-										delete cmd;
-									}
-									break;
+					// printf("MSG:%d\n",pmsg->msgid);
+					char* cmd=(char*)pmsg->pdata;
+					printf("CONTROL MESSAGE RECEIVED: %10s\n",cmd);
+					// psbd->pcom->send_response((const unsigned char *)"response",5);
+					// psbd->pimgproc->add_new_user("dolmangi");
+					delete cmd;
+				}
+				break;
+				case MYMSG_NET_CONNECTED: {
+					printf(".");
+					if (psbd->pcom==pmsg->pdata)
+						psbd->pcom_tls->stop();
+					else 
+						psbd->pcom->stop();
+				}
+				break;
+				case MYMSG_NET_DISCONNECTED: {
+					psbd->pcom->start();
+					psbd->pcom_tls->start();
+				}
+				break;
 			}
 			delete pmsg;
 		}
@@ -114,21 +128,35 @@ gboolean thread_stop(tServiceData *psbd)
 		if (psbd->pcom) {
 			psbd->pcom->stop();
 		}
+		if (psbd->pcom_tls) {
+			psbd->pcom_tls->stop();
+		}		
 		if (psbd->pimgproc) { 
 			psbd->pimgproc->stop();
 		}
 		psbd->thread_run=false;
 		(void)g_thread_join (psbd->main_thread);
-		g_async_queue_unref (psbd->queue);
 		ret=true;
 	}
 	return ret;
 }
 
+
 int main(int argc, char *argv[])
 {
+	// CMydb db;
+	// db.start();
+	// db.initialize_database();
+	// db.list_alluser();
+	// CAuth auth;	
+
+	// int ret=db.check_passwd("lg",auth.get_passwd_enc("lg1234"));
+	// printf("RET=%d\n", ret);
+	// // auth.get_passwd_enc("lg1234");
 	tServiceData sbd;
-	sbd.pcom=new CComm();
+	sbd.queue = g_async_queue_new ();
+	sbd.pcom=new CComm(false,TCP_PORT_NON_SECURE,sbd.queue);
+	sbd.pcom_tls=new CComm(true,TCP_PORT_SECURE,sbd.queue);
 	if (argc==2) {
 		sbd.pimgproc=new CImgProc(argv[1]);
 	}
@@ -138,9 +166,6 @@ int main(int argc, char *argv[])
 	sbd.mainloop = g_main_loop_new(nullptr, false);
 	if (sbd.mainloop !=nullptr) {
 		guint sig1,sig2;
-
-		sbd.tcp_port = TCP_PORT_NON_SECURE;
-		sbd.tls_port = TCP_PORT_SECURE;
 		// (void)configureWdogTimer(psbd);
 
 		if (thread_start(&sbd)) {
@@ -159,14 +184,19 @@ int main(int argc, char *argv[])
 
 		g_main_loop_unref(sbd.mainloop);
 		sbd.mainloop = nullptr;
+		g_async_queue_unref (sbd.queue);
 
 	}
 
+    // for(iter=sbd.list_com.begin(); iter!=sbd.list_com.end(); iter++) 
 	if (sbd.pcom) {
 		delete sbd.pcom;
 		sbd.pcom = nullptr;
 	}
-
+	if (sbd.pcom_tls) {
+		delete sbd.pcom_tls;
+		sbd.pcom_tls = nullptr;
+	}
 	if (sbd.pimgproc) {
 		delete sbd.pimgproc;
 		sbd.pimgproc = nullptr;
