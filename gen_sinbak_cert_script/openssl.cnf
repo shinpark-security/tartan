@@ -1,0 +1,101 @@
+[default]
+dir                             = .
+ocsp_uri                        = http://ocsp.sinbak:8080
+caissuers_uri                   = http://root-ca.sinbak/root-ca.crt
+crl_uri                         = http://root-ca.sinbak/revoked.crl
+
+[ca]
+default_ca                      = CA_default
+
+[CA_default]
+serial                          = $dir/serial
+database                        = $dir/index.txt
+new_certs_dir                   = $dir/newcerts
+certificate                     = $dir/cacert.pem
+private_key                     = $dir/private/cakey.pem
+x509_extensions                 = usr_cert
+default_days                    = 730
+default_crl_days                = 30
+default_md                      = sha256
+preserve                        = no
+email_in_dn                     = no
+nameopt                         = default_ca
+certopt                         = default_ca
+policy                          = policy_match
+
+[policy_match]
+countryName                     = match
+stateOrProvinceName             = match
+organizationName                = match
+organizationalUnitName          = optional
+commonName                      = supplied
+emailAddress                    = optional
+
+[req]
+default_bits                    = 4096                  # Size of keys
+default_keyfile                 = key.pem               # name of generated keys
+default_md                      = sha256                # message digest algorithm
+string_mask                     = utf8only              # permitted characters
+distinguished_name              = req_distinguished_name
+req_extensions                  = v3_req
+
+[ req_distinguished_name ]
+# Variable name                   Prompt string
+#---------------------------      ------------------------------
+0.organizationName              = Organization Name (company)
+organizationalUnitName          = Organizational Unit Name (department, division)
+emailAddress                    = Email Address
+emailAddress_max                = 40
+localityName                    = Locality Name (city, district)
+stateOrProvinceName             = State or Province Name (full name)
+countryName                     = Country Name (2 letter code)
+countryName_min                 = 2
+countryName_max                 = 2
+commonName                      = Common Name (hostname, IP, or your name)
+commonName_max                  = 64
+
+# Default values for the above, for consistency and less typing.
+# Variable name                   Value
+#---------------------------      ------------------------------
+0.organizationName_default      = LG Electronics
+organizationalUnitName_default  = CMU
+localityName_default            = Seoul
+stateOrProvinceName_default     = Seoul
+countryName_default             = KR
+
+[v3_ca]
+basicConstraints                = CA:TRUE
+subjectKeyIdentifier            = hash
+authorityKeyIdentifier          = keyid:always,issuer:always
+keyUsage                        = keyCertSign, cRLSign
+nsCertType                      = sslCA
+
+[v3_req]
+basicConstraints                = CA:FALSE
+subjectKeyIdentifier            = hash
+
+[crl_ext]
+authorityKeyIdentifier          = keyid:always,issuer:always
+
+[v3_OCSP]
+basicConstraints                = CA:FALSE
+keyUsage                        = nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage                = OCSPSigning
+
+[usr_cert]
+basicConstraints                = CA:FALSE
+subjectKeyIdentifier            = hash
+authorityKeyIdentifier          = keyid,issuer:always
+keyUsage                        = nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage                = serverAuth,clientAuth
+subjectAltName                  = @alt_names
+authorityInfoAccess             = @ocsp_info
+nsCaRevocationUrl               = $crl_uri
+
+[ocsp_info]
+caIssuers;URI.0                 = $caissuers_uri
+OCSP;URI.0                      = $ocsp_uri
+
+[alt_names]
+
+
