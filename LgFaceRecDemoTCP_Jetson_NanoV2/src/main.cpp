@@ -133,6 +133,10 @@ gpointer main_thread (gpointer data) {
 			delete pmsg;
 		}
 		// printf("main thread...\n");
+#if 1 //temp for test
+		psbd->pimgproc->set_enable_send(psbd->pcom->tcp_connected);
+		psbd->pimgproc->set_enable_send(psbd->pcom_tls->tcp_connected);
+#endif
 	}
 
 	if (psbd->pcom) {
