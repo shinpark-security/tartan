@@ -93,7 +93,7 @@ CMydb::list_alluser() {
 }
 
 int 
-CMydb::check_passwd(string id, string passwd) {
+CMydb::find_user(string id, string passwd) {
     int ret=-1;
     sqlite3 *db;
     char *err_msg = 0;
@@ -120,7 +120,7 @@ CMydb::check_passwd(string id, string passwd) {
         char *sql=(char*)strstr.c_str();
         printf("SQL=%s\n",sql);
         if (sqlite3_prepare(db, sql, -1, &stmt, nullptr) == SQLITE_OK) { 
-            while (sqlite3_step(stmt) == SQLITE_ROW) { 
+            if (sqlite3_step(stmt) == SQLITE_ROW) { 
                 printf("id:%d  account:%s, passwd:%s, privilege:%d \n", 
                         sqlite3_column_int(stmt, 0), 
                         (char*)sqlite3_column_text(stmt, 1), 

@@ -70,13 +70,23 @@ CComm::stop() {
     // close(TcpListenPort->ListenFd);
     close_tcp_connected_port(&TcpConnectedPort);
     close_tcp_listen_port(&TcpListenPort);
-    printf("closed and wait for thread join.\n");
+    printf("closed and wait for thread join. TLS=%d\n", tls_mode);
     (void)g_thread_join(thread);
     printf("thread join finished\n");
     thread=nullptr;
     printf("CComm::stop()-\n");
     return true;
 }
+
+gboolean
+CComm::disconnect() {
+    printf("CComm::disconnect()+ TLS=%d\n", tls_mode);
+    if (!thread_run) return true;
+    close_tcp_connected_port(&TcpConnectedPort);
+    printf("CComm::disconnect()- TLS=%d\n", tls_mode);
+    return true;
+}
+
 
 gboolean
 CComm::pause() {
@@ -176,12 +186,13 @@ CComm::send_msg_connected (gboolean connected) {
         MyMsg *pmsg = new MyMsg;
         pmsg->msgid= connected ? MYMSG_NET_CONNECTED : MYMSG_NET_DISCONNECTED;
         pmsg->arg1= tls_mode;
-        pmsg->pdata=this;
+        pmsg->pobj=this;
         g_async_queue_push (main_queue, pmsg );
     }
     return true;
 }
 
+#define PACKET_MAX_BUFFER_SIZE  (1024*1024)
 gpointer 
 CComm::comm_thread (gpointer data) {
     printf("comm_thread()+\n");
@@ -190,6 +201,11 @@ CComm::comm_thread (gpointer data) {
     {
         printf("open_tcp_listen_port Failed\n");
         return(nullptr); 
+    }
+    unsigned char *buffer=new unsigned char[PACKET_MAX_BUFFER_SIZE];
+    if (!buffer) {
+        printf("BUffer allocation failed!!!!!!!");
+        return nullptr;
     }
 
     while(pcom->thread_run) {
@@ -212,22 +228,24 @@ CComm::comm_thread (gpointer data) {
             catch (int ex) {
                     printf("connection_wait Exception...%d.. and.TLS=%d\n",ex,pcom->tls_mode);
                     pcom->tcp_connected=false;
-                    pcom->close_tcp_listen_port(&pcom->TcpListenPort);
                     pcom->send_msg_connected(false);
                     continue;
             }
         } else {
             // printf("check...\n");
+            if (!pcom->TcpConnectedPort) {
+                pcom->tcp_connected=false;
+                continue;
+            }
             struct pollfd pfd;
             pfd.fd = pcom->TcpConnectedPort->ConnectedFd;
             pfd.events = POLLIN | POLLHUP | POLLRDNORM;
             pfd.revents = 0;
-            unsigned char buffer[PACKET_SIZE];
             int ret=0;
 
             if (pfd.revents == 0) {
                 // g_mutex_lock (&pcom->lock);
-                memset(buffer,0,PACKET_SIZE);
+                memset(buffer,0,PACKET_MAX_BUFFER_SIZE);
                
                 int pollret=0;
                 try {
@@ -239,7 +257,7 @@ CComm::comm_thread (gpointer data) {
                     pcom->send_msg_connected(false);
                     pcom->close_tcp_connected_port(&pcom->TcpConnectedPort);
                 }
-                if ( pollret > 0) {
+                if ( pollret > 0 && pcom->TcpConnectedPort) {
                     try {
                         if (pcom->tls_mode)
                             ret=wolfSSL_recv(pcom->TcpConnectedPort->ssl, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT);
@@ -252,13 +270,14 @@ CComm::comm_thread (gpointer data) {
                             pcom->close_tcp_connected_port(&pcom->TcpConnectedPort);
                         }
                         if (ret>0) {
-                            ret=pcom->read_data_tcp(pcom->TcpConnectedPort,buffer,PACKET_SIZE);
-                            // printf("bytes=%d, data=[%10s]\n", ret, buffer);     
-                            if (pcom->main_queue) {
+                            ret=pcom->read_data_tcp(pcom->TcpConnectedPort,buffer,PACKET_MAX_BUFFER_SIZE);
+                            printf("bytes=%d, data=[%s]\n", ret, buffer);     
+                            if (ret<=PACKET_MAX_BUFFER_SIZE && ret>0 && pcom->main_queue) {
                                 MyMsg *pmsg = new MyMsg;
                                 pmsg->msgid=MYMSG_CONTROL;
                                 pmsg->pdata=(gpointer)new char[ret];
-                                memcpy(pmsg->pdata,buffer,ret);
+                                pmsg->pobj=pcom;
+                                memcpy(pmsg->pdata,buffer+sizeof(PacketHeader),ret);
                                 g_async_queue_push (pcom->main_queue, pmsg );
                             }                            
                         }
@@ -278,6 +297,7 @@ CComm::comm_thread (gpointer data) {
         sleep(0.1);
         // printf("comm thread...\n");
     }
-    printf("comm_thread()-");
+     if (!buffer) delete buffer; buffer=nullptr;
+    printf("comm_thread()- TLS=%d\n", pcom->tls_mode);
 	pcom->close_tcp_listen_port(&pcom->TcpListenPort);
 }

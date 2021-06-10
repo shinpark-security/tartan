@@ -85,16 +85,37 @@ gpointer main_thread (gpointer data) {
 				case MYMSG_CONTROL: {
 					// printf("MSG:%d\n",pmsg->msgid);
 					char* cmd=(char*)pmsg->pdata;
+					CComm *pcom=(CComm*)pmsg->pobj;
 					printf("CONTROL MESSAGE RECEIVED: %10s\n",cmd);
 					// psbd->pcom->send_response((const unsigned char *)"response",5);
 					// psbd->pimgproc->add_new_user("dolmangi");
+					if (cmd[0]=='1') {
+						char *account=&cmd[1];
+						char *passwd=&cmd[21];
+						printf("ACCOUNT=%s PASSWORD=%s\n ", account, passwd);
+						CAuth  auth;
+						int priv=auth.login(account, passwd);
+						if (priv==0) {
+							printf("OK You're an administrator\n");						
+							psbd->pimgproc->set_enable_send(true);
+						}
+						else if (priv>0) {
+							printf("OK You're a normal user\n");						
+							psbd->pimgproc->set_enable_send(true);
+						}
+						else {
+							printf("Login fail.\n");
+							psbd->pimgproc->set_enable_send(false);
+							if (pcom) pcom->disconnect();							
+						}
+					}
 					delete cmd;
 				}
 				break;
 				case MYMSG_NET_CONNECTED: {
 					printf("MYMSG_NET_CONNECTED\n");
-					// printf("pcom=%p  pdata=%p\n",psbd->pcom, pmsg->pdata);
-					// if (psbd->pcom==pmsg->pdata)
+					// printf("pcom=%p  pobj=%p\n",psbd->pcom, pmsg->pobj);
+					// if (psbd->pcom==pmsg->pobj)
 					// 	psbd->pcom_tls->pause();
 					// else 
 					// 	psbd->pcom->pause();
@@ -102,7 +123,7 @@ gpointer main_thread (gpointer data) {
 				break;
 				case MYMSG_NET_DISCONNECTED: {
 					printf("MYMSG_NET_DISCONNECTED\n");
-					// if (psbd->pcom==pmsg->pdata)
+					// if (psbd->pcom==pmsg->pobj)
 					// 	psbd->pcom_tls->resume();
 					// else 
 					// 	psbd->pcom->resume();
@@ -111,7 +132,6 @@ gpointer main_thread (gpointer data) {
 			}
 			delete pmsg;
 		}
-		psbd->pimgproc->set_enable_send(psbd->pcom->tcp_connected);
 		// printf("main thread...\n");
 	}
 

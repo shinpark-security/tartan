@@ -51,6 +51,7 @@ public:
     gboolean thread_pause;
     gboolean pause();
     gboolean resume();
+    gboolean disconnect();
 private:
     GMutex lock;
     GAsyncQueue *main_queue;

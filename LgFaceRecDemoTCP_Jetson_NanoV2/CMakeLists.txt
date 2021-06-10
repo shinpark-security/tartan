@@ -63,7 +63,7 @@ if(NOT TENSORRT_FOUND)
   message(ERROR
     "Cannot find TensorRT library.")
 endif()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CFLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CFLAGS} -g -O0")
 
 # l2norm_helper plugin
 add_subdirectory(trt_l2norm_helper)

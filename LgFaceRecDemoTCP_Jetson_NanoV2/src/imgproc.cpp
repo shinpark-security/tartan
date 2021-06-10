@@ -230,6 +230,7 @@ CImgProc::imgproc_thread (gpointer data)
         
         // if (TcpSendImageAsJpeg(TcpConnectedPort,frame)<0)  break;
 
+        // printf("send jpg\n");
         if (pthis->enable_send && pthis->main_queue) {
           MyMsg *pmsg = new MyMsg;
           pmsg->msgid=MYMSG_FRAME;

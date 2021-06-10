@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <openssl/sha.h>
 #include <string>
-
+#include "mydb.h"
 
 CAuth::CAuth() {
 
@@ -28,4 +28,10 @@ CAuth::get_passwd_enc(string pass)
     string str=mdString;
     // printf("SHA256 digest: %s\n", mdString);
     return str;
+}
+
+int 
+CAuth::login(string id, string passwd) {
+    CMydb db;
+    return db.find_user(id,get_passwd_enc(passwd));
 }

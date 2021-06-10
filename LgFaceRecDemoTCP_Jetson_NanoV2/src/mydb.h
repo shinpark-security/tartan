@@ -14,7 +14,7 @@ public:
     gboolean initialize_database();
     gboolean list_alluser() ;
 
-    int check_passwd(string id, string passwd);
+    int find_user(string id, string passwd);
 
 private:
     sqlite3* db;

@@ -17,8 +17,23 @@ typedef struct {
   int arg1;
   int arg2;
   gpointer pdata;
+  gpointer pobj;
   cv::Mat mat;
 } MyMsg;
+
+
+#pragma pack(push, 1)    // 1바이트 크기로 정렬
+typedef  struct {
+    unsigned char head[4];
+    int32_t  size;
+} PacketHeader;
+
+typedef  struct {
+	PacketHeader hdr;
+	unsigned char payload[0];
+} Packet;
+#pragma pack(pop)
+
 
 #define PACKET_SIZE 10
 
