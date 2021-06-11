@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
        exit(0);
     }
 
-   if(argv[3] == "1") {
+   if(!strncmp(argv[3],"1",1)) {
 	   tls_mode = true;
    }
 
@@ -83,12 +83,14 @@ int main(int argc, char *argv[])
    }
 
    if(tls_mode == true) {
+	  printf("OpenTcpConnection TLS\n");
 	   if  ((TcpConnectedPort=OpenTcpConnectionTLS(argv[1],argv[2]))==NULL)  // Open UDP Network port
 	   {
 		   printf("OpenTcpConnection\n");
 		   return(-1); 
 	   }
    } else {
+	  printf("OpenTcpConnection non-TLS\n");
 	   if  ((TcpConnectedPort=OpenTcpConnection(argv[1],argv[2]))==NULL)  // Open UDP Network port
 	   {
 		   printf("OpenTcpConnection\n");

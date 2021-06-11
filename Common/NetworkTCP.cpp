@@ -331,7 +331,7 @@ TTcpConnectedPort *OpenTcpConnectionTLS(const char *remotehostname, const char *
 	}
 
 	/* Load client certificates into WOLFSSL_CTX */
-	if (wolfSSL_CTX_load_verify_locations(TcpConnectedPort->ctx, CERT_FILE, NULL)
+	if (wolfSSL_CTX_load_verify_locations(TcpConnectedPort->ctx, CHAIN_CERT_FILE, NULL)
 			!= WOLFSSL_SUCCESS) {
 		fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
 				CERT_FILE);
