@@ -19,116 +19,122 @@
 #include <termios.h>
 #include "mymsg.h"
 #include "imgproc.h"
+#include "mydb.h"
 
-CImgProc::CImgProc(){
-  thread_run=true;
-  main_queue=nullptr;
-  camera_dev="";
-  imgproc_queue=g_async_queue_new ();
+CImgProc::CImgProc()
+{
+    thread_run = true;
+    main_queue = nullptr;
+    camera_dev = "";
+    imgproc_queue = g_async_queue_new();
 }
 
-CImgProc::CImgProc(string dev){
-  thread_run=true;
-  main_queue=nullptr;
-  camera_dev=dev;
-  imgproc_queue=g_async_queue_new ();
+CImgProc::CImgProc(string dev)
+{
+    thread_run = true;
+    main_queue = nullptr;
+    camera_dev = dev;
+    imgproc_queue = g_async_queue_new();
 }
 
-CImgProc::~CImgProc(){
-  g_async_queue_unref (imgproc_queue);
+CImgProc::~CImgProc()
+{
+    g_async_queue_unref(imgproc_queue);
 }
 
 gboolean
-CImgProc::start(GAsyncQueue *q){
-  main_queue=q;
-  thread = g_thread_new ("imgproc_thread", imgproc_thread, this);
-  if (thread != nullptr)  {
-      return true;
-  }
-  return false;
+CImgProc::start(GAsyncQueue *q)
+{
+    main_queue = q;
+    thread = g_thread_new("imgproc_thread", imgproc_thread, this);
+    if (thread != nullptr)
+    {
+        return true;
+    }
+    return false;
 }
 
-gboolean 
+gboolean
 CImgProc::set_enable_send(gboolean enable)
 {
-  enable_send=enable;
-  return true;
+    enable_send = enable;
+    return true;
 }
-
 
 gboolean
-CImgProc::stop(){
-  if (!thread_run) return true;
-  g_async_queue_push (imgproc_queue, ((gpointer) (glong*) (glong)(-1)) );
-  thread_run=false;
+CImgProc::stop()
+{
+    if (!thread_run)
+        return true;
+    g_async_queue_push(imgproc_queue, ((gpointer)(glong *)(glong)(-1)));
+    thread_run = false;
 
-  (void)g_thread_join(thread);
-  return true;
+    (void)g_thread_join(thread);
+    return true;
 }
 
-int
-CImgProc::kbhit()
+int CImgProc::kbhit()
 {
-    struct timeval tv = { 0L, 0L };
+    struct timeval tv = {0L, 0L};
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(0, &fds);
     return select(1, &fds, NULL, NULL, &tv);
 }
 
-int 
-CImgProc::getch()
+int CImgProc::getch()
 {
     int r;
     unsigned char c;
-    if ((r = read(0, &c, sizeof(c))) < 0) {
+    if ((r = read(0, &c, sizeof(c))) < 0)
+    {
         return r;
-    } else {
+    }
+    else
+    {
         return c;
     }
 }
 // Uncomment to print timings in milliseconds
 // #define LOG_TIMES
 
-gboolean 
+gboolean
 CImgProc::add_new_user(const string name)
 {
-  printf("add_new_user()+\n");
-  ImgProcMsg *pmsg = new ImgProcMsg;
-  pmsg->msgid=IMGPROC_ADDNEW;
-  pmsg->name=name;
-  g_async_queue_push (imgproc_queue, pmsg ); 
-  return true;
+    printf("add_new_user()+\n");
+    ImgProcMsg *pmsg = new ImgProcMsg;
+    pmsg->msgid = IMGPROC_ADDNEW;
+    pmsg->name = name;
+    g_async_queue_push(imgproc_queue, pmsg);
+    return true;
 }
- 
 
 using namespace nvinfer1;
 using namespace nvuffparser;
 
-gpointer 
-CImgProc::imgproc_thread (gpointer data)
+gpointer
+CImgProc::imgproc_thread(gpointer data)
 {
-  CImgProc *pthis=(CImgProc *)data;
-  bool               UseCamera=false;
-
-//    if (argc==2) UseCamera=true;
-   UseCamera=true;
-
+    CImgProc *pthis = (CImgProc *)data;
+    bool UseCamera = false;
 
     Logger gLogger = Logger();
     // Register default TRT plugins (e.g. LRelu_TRT)
-    if (!initLibNvInferPlugins(&gLogger, "")) { return nullptr; }
+    if (!initLibNvInferPlugins(&gLogger, ""))
+    {
+        return nullptr;
+    }
 
     // USER DEFINED VALUES
-    const string uffFile="../facenetModels/facenet.uff";
-    const string engineFile="../facenetModels/facenet.engine";
+    const string uffFile = "../facenetModels/facenet.uff";
+    const string engineFile = "../facenetModels/facenet.engine";
     DataType dtype = DataType::kHALF;
     //DataType dtype = DataType::kFLOAT;
     bool serializeEngine = true;
     int batchSize = 1;
     int nbFrames = 0;
-   // int videoFrameWidth =1280;
-   // int videoFrameHeight =720;
+    // int videoFrameWidth =1280;
+    // int videoFrameHeight =720;
     int videoFrameWidth = 640;
     int videoFrameHeight = 480;
 
@@ -138,18 +144,22 @@ CImgProc::imgproc_thread (gpointer data)
 
     // init facenet
     FaceNetClassifier faceNet = FaceNetClassifier(gLogger, dtype, uffFile, engineFile, batchSize, serializeEngine,
-            knownPersonThreshold, maxFacesPerScene, videoFrameWidth, videoFrameHeight);
-    
+                                                  knownPersonThreshold, maxFacesPerScene, videoFrameWidth, videoFrameHeight);
+
     VideoStreamer *videoStreamer;
 
     // init opencv stuff
-    if (pthis->camera_dev=="")  videoStreamer = new VideoStreamer(0, videoFrameWidth, videoFrameHeight, 60, isCSICam);
-    else {
-      printf("Using Camera Device : %s\n",pthis->camera_dev.c_str() );
-      videoStreamer = new VideoStreamer(pthis->camera_dev, videoFrameWidth, videoFrameHeight);
+    if (pthis->camera_dev == "") {
+        videoStreamer = new VideoStreamer(0, videoFrameWidth, videoFrameHeight, 60, isCSICam);
+        UseCamera = true;
     }
-
-
+    else
+    {
+        printf("Using Camera Device : %s\n", pthis->camera_dev.c_str());
+        videoStreamer = new VideoStreamer(pthis->camera_dev, videoFrameWidth, videoFrameHeight);
+        if (pthis->camera_dev.substr(4)=="/dev") 
+            UseCamera = true;
+    }
 
     cv::Mat frame;
 
@@ -161,60 +171,80 @@ CImgProc::imgproc_thread (gpointer data)
     outputBbox.reserve(maxFacesPerScene);
 
     // get embeddings of known faces
+#if 0
     std::vector<struct Paths> paths;
     cv::Mat image;
     getFilePaths("../imgs", paths);
-    for(int i=0; i < paths.size(); i++) {
+    for (int i = 0; i < paths.size(); i++)
+    {
         loadInputImage(paths[i].absPath, image, videoFrameWidth, videoFrameHeight);
         outputBbox = mtCNN.findFace(image);
         std::size_t index = paths[i].fileName.find_last_of(".");
-        std::string rawName = paths[i].fileName.substr(0,index);
+        std::string rawName = paths[i].fileName.substr(0, index);
         faceNet.forwardAddFace(image, outputBbox, rawName);
         faceNet.resetVariables();
     }
+#else
+    vector<tFaceEntity> facelist;
+    CMydb db;
+    cv::Mat image = cv::Mat(videoFrameHeight, videoFrameWidth, 16);
+    if (db.list_faces(&facelist)) {
+        for (int i=0;i<facelist.size();i++) {
+            image.data = facelist[i].data;
+            printf("DB Name:%s\n", facelist[i].name.c_str());
+            outputBbox = mtCNN.findFace(image);
+            faceNet.forwardAddFace(image, outputBbox, facelist[i].name);
+            faceNet.resetVariables();
+            delete facelist[i].data;
+            facelist[i].data=nullptr;
+        }
+    }
+
+#endif    
     outputBbox.clear();
 
+    //  if  ((TcpListenPort=OpenTcpListenPort(pthis->tcp_port))==NULL)  // Open TCP Network port
+    //    {
+    //      printf("OpenTcpListenPortFailed\n");
+    //      return(nullptr);
+    //    }
 
-  //  if  ((TcpListenPort=OpenTcpListenPort(pthis->tcp_port))==NULL)  // Open TCP Network port
-  //    {
-  //      printf("OpenTcpListenPortFailed\n");
-  //      return(nullptr); 
-  //    }
+    //  clilen = sizeof(cli_addr);
+    //  printf("Listening for connections   port=%d\n", pthis->tcp_port);
 
-    
-  //  clilen = sizeof(cli_addr);
-  //  printf("Listening for connections   port=%d\n", pthis->tcp_port);
+    //  if  ((TcpConnectedPort=AcceptTcpConnection(TcpListenPort,&cli_addr,&clilen))==NULL)
+    //    {
+    //      printf("AcceptTcpConnection Failed\n");
+    //      return(nullptr);
+    //    }
 
-  //  if  ((TcpConnectedPort=AcceptTcpConnection(TcpListenPort,&cli_addr,&clilen))==NULL)
-  //    {  
-  //      printf("AcceptTcpConnection Failed\n");
-  //      return(nullptr); 
-  //    }
+    //  printf("Accepted connection Request\n");
 
-  //  printf("Accepted connection Request\n");
-
-     cv::cuda::GpuMat src_gpu, dst_gpu;
-     cv::Mat dst_img;
+    cv::cuda::GpuMat src_gpu, dst_gpu;
+    cv::Mat dst_img;
     // loop over frames with inference
     auto globalTimeStart = chrono::steady_clock::now();
-    
-    while (pthis->thread_run) {
+
+    while (pthis->thread_run)
+    {
 
         videoStreamer->getFrame(frame);
-        if (frame.empty()) {
+        if (frame.empty())
+        {
             std::cout << "Empty frame! Exiting...\n Try restarting nvargus-daemon by "
-                         "doing: sudo systemctl restart nvargus-daemon" << std::endl;
+                         "doing: sudo systemctl restart nvargus-daemon"
+                      << std::endl;
             break;
         }
-       // Create a destination to paint the source into.
-       dst_img.create(frame.size(), frame.type());
+        // Create a destination to paint the source into.
+        dst_img.create(frame.size(), frame.type());
 
-      // Push the images into the GPU
-      if (UseCamera)
+        // Push the images into the GPU
+        if (UseCamera)
         {
-         src_gpu.upload(frame);
-         cv::cuda::rotate(src_gpu, dst_gpu, src_gpu.size(), 180, src_gpu.size().width, src_gpu.size().height);
-         dst_gpu.download(frame);
+            src_gpu.upload(frame);
+            cv::cuda::rotate(src_gpu, dst_gpu, src_gpu.size(), 180, src_gpu.size().width, src_gpu.size().height);
+            dst_gpu.download(frame);
         }
 
         auto startMTCNN = chrono::steady_clock::now();
@@ -227,15 +257,16 @@ CImgProc::imgproc_thread (gpointer data)
         faceNet.featureMatching(frame);
         auto endFeatM = chrono::steady_clock::now();
         faceNet.resetVariables();
-        
+
         // if (TcpSendImageAsJpeg(TcpConnectedPort,frame)<0)  break;
 
         // printf("send jpg\n");
-        if (pthis->enable_send && pthis->main_queue) {
-          MyMsg *pmsg = new MyMsg;
-          pmsg->msgid=MYMSG_FRAME;
-          pmsg->mat=frame.clone(); //Mat copy
-          g_async_queue_push (pthis->main_queue, pmsg );
+        if (pthis->enable_send && pthis->main_queue)
+        {
+            MyMsg *pmsg = new MyMsg;
+            pmsg->msgid = MYMSG_FRAME;
+            pmsg->mat = frame.clone(); //Mat copy
+            g_async_queue_push(pthis->main_queue, pmsg);
         }
 
         //cv::imshow("VideoSource", frame);
@@ -243,60 +274,61 @@ CImgProc::imgproc_thread (gpointer data)
         outputBbox.clear();
         frame.release();
 
+        ImgProcMsg *pmsg = (ImgProcMsg *)g_async_queue_timeout_pop(pthis->imgproc_queue, 10U);
+        if (pmsg == GINT_TO_POINTER(-1))
+        {
+            printf("Exit imgproc.......\n");
+            break;
+        }
+        else if (pmsg)
+        {
+            switch (pmsg->msgid)
+            {
+            case IMGPROC_ADDNEW:
+            {
+                printf("MSG:%d  ADDNEW name=%s\n", pmsg->msgid, pmsg->name.c_str());
 
-        ImgProcMsg* pmsg = (ImgProcMsg*) g_async_queue_timeout_pop  (pthis->imgproc_queue, 10U);
-        if (pmsg == GINT_TO_POINTER (-1)) {
-          printf("Exit imgproc.......\n");
-          break;
-        } else if (pmsg) {
-          switch(pmsg->msgid) {
-          case IMGPROC_ADDNEW: {
-              printf("MSG:%d  ADDNEW name=%s\n",pmsg->msgid, pmsg->name.c_str());
+                auto dTimeStart = chrono::steady_clock::now();
+                videoStreamer->getFrame(frame);
+                // Create a destination to paint the source into.
+                dst_img.create(frame.size(), frame.type());
 
-              auto dTimeStart = chrono::steady_clock::now();
-              videoStreamer->getFrame(frame);
-              // Create a destination to paint the source into.
-              dst_img.create(frame.size(), frame.type());
+                // Push the images into the GPU
+                src_gpu.upload(frame);
+                cv::cuda::rotate(src_gpu, dst_gpu, src_gpu.size(), 180, src_gpu.size().width, src_gpu.size().height);
+                dst_gpu.download(frame);
 
-              // Push the images into the GPU
-              src_gpu.upload(frame);
-              cv::cuda::rotate(src_gpu, dst_gpu, src_gpu.size(), 180, src_gpu.size().width, src_gpu.size().height);
-              dst_gpu.download(frame);
+                outputBbox = mtCNN.findFace(frame);
 
-              outputBbox = mtCNN.findFace(frame);
+                // if (TcpSendImageAsJpeg(TcpConnectedPort,frame)<0)  break;
 
-              // if (TcpSendImageAsJpeg(TcpConnectedPort,frame)<0)  break;
-
-
-              //cv::imshow("VideoSource", frame);
-              faceNet.addNewFace(frame, outputBbox, pmsg->name);
-              auto dTimeEnd = chrono::steady_clock::now();
-              globalTimeStart += (dTimeEnd - dTimeStart);              
+                //cv::imshow("VideoSource", frame);
+                faceNet.addNewFace(frame, outputBbox, pmsg->name);
+                auto dTimeEnd = chrono::steady_clock::now();
+                globalTimeStart += (dTimeEnd - dTimeStart);
             }
             break;
-          }
-          delete pmsg;
+            }
+            delete pmsg;
         }
 
-        #ifdef LOG_TIMES
+#ifdef LOG_TIMES
         std::cout << "mtCNN took " << std::chrono::duration_cast<chrono::milliseconds>(endMTCNN - startMTCNN).count() << "ms\n";
         std::cout << "Forward took " << std::chrono::duration_cast<chrono::milliseconds>(endForward - startForward).count() << "ms\n";
         std::cout << "Feature matching took " << std::chrono::duration_cast<chrono::milliseconds>(endFeatM - startFeatM).count() << "ms\n\n";
-        #endif  // LOG_TIMES
+#endif // LOG_TIMES
     }
-  
-    auto globalTimeEnd = chrono::steady_clock::now();
 
+    auto globalTimeEnd = chrono::steady_clock::now();
 
     videoStreamer->release();
 
-    auto milliseconds = chrono::duration_cast<chrono::milliseconds>(globalTimeEnd-globalTimeStart).count();
-    double seconds = double(milliseconds)/1000.;
-    double fps = nbFrames/seconds;
+    auto milliseconds = chrono::duration_cast<chrono::milliseconds>(globalTimeEnd - globalTimeStart).count();
+    double seconds = double(milliseconds) / 1000.;
+    double fps = nbFrames / seconds;
 
-    std::cout << "Counted " << nbFrames << " frames in " << double(milliseconds)/1000. << " seconds!" <<
-              " This equals " << fps << "fps.\n";
+    std::cout << "Counted " << nbFrames << " frames in " << double(milliseconds) / 1000. << " seconds!"
+              << " This equals " << fps << "fps.\n";
 
     return nullptr;
 }
-

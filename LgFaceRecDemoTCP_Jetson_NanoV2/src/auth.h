@@ -6,9 +6,9 @@
 #include <string>
 using namespace std;
 
-class CAuth {
+class CAuth
+{
 public:
-
     CAuth();
     ~CAuth();
     string get_passwd_enc(string pass);
