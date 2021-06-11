@@ -5,7 +5,7 @@ void LoginProtocol::setMsgType(const int type)
 	msg.set_msg_type(type);
 }
 
-void LoginProtocol::setTimestamp(const int time)
+void LoginProtocol::setTimestamp(const long long time)
 {
 	msg.set_timestamp(time);
 }
@@ -25,21 +25,22 @@ void LoginProtocol::setAuthority(const int authority)
 	msg.set_authority(authority);
 }
 
-unsigned char* LoginProtocol::serializeToArray()
+unsigned char* LoginProtocol::serializeToArray(unsigned char* buffer)
 {
-	size_t bufferLength = msg.ByteSize();
-	unsigned char* buffer = new unsigned char[bufferLength];
+	size_t bufferLength = msg.ByteSizeLong();
 	bool result = msg.SerializeToArray(buffer, bufferLength);
 	if (true == result) {
 		return buffer;
 	}
 	else {
 		// TODO : error Ã³¸®
+		return NULL;
 	}
 }
+
 size_t LoginProtocol::getSize()
 {
-	return msg.ByteSize();
+	return msg.ByteSizeLong();
 }
 
 void LoginProtocol::deSerialize(int* msgType,

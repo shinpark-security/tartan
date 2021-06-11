@@ -63,8 +63,8 @@ int main(int argc, char *argv[])
 	flip_method);
     std::cout << "Using pipeline: \n\t" << pipeline << "\n";
  
-    cv::VideoCapture capture("/dev/video0");
-    //cv::VideoCapture capture(pipeline, cv::CAP_GSTREAMER);
+    //cv::VideoCapture capture("/dev/video0");
+    cv::VideoCapture capture(pipeline, cv::CAP_GSTREAMER);
     if(!capture.isOpened()) {
 	std::cout<<"Failed to open camera."<<std::endl;
 	return (-1);
@@ -113,6 +113,7 @@ int main(int argc, char *argv[])
    std::vector<float*> keypoints;
    num_dets = get_detections(origin_cpu, &detections, &rects, &keypoints);            
 #endif	
+
 
     // Send processed UDP image
     if (TcpSendImageAsJpegProtocol(TcpConnectedPort,image)<0)  break;   

@@ -90,8 +90,62 @@ int main(int argc, char *argv[])
      }
 
    printf("Accepted connection Request\n");
-   
 
+   const int HEADER_SIZE = 10000;
+   unsigned char* packetHeader = new (std::nothrow) unsigned char[HEADER_SIZE];
+
+   unsigned int msgSize = 0;
+   msgSize = ReadDataTcp(TcpConnectedPort, packetHeader, HEADER_SIZE);
+   if (msgSize > 8) {
+	   printf("packet size : %d\n", msgSize);
+	   int msgType = 0;
+	   string userId = "";
+	   string userPassword = "";
+	   int authority = 0;
+
+	   LoginProtocol* msgBuff = new LoginProtocol();
+	   msgBuff->deSerialize(&msgType, userId, userPassword, &authority, &packetHeader[8], msgSize - 8);
+
+	   printf("msgType : %d\n", msgType);
+	   printf("userId : %s\n", userId.c_str());
+	   printf("userPassword : %s\n", userPassword.c_str());
+
+	   delete msgBuff;
+   }
+
+   // SEND Success response message
+
+
+   delete[] packetHeader;
+   /*
+    const int HEADER_SIZE = 8;
+    unsigned char* packetHeader = new (std::nothrow) unsigned char[HEADER_SIZE];
+	if (HEADER_SIZE == ReadDataTcp(TcpConnectedPort, packetHeader, HEADER_SIZE)) {
+		unsigned int packetSize;
+		memcpy(&packetSize, &packetHeader[4], 4);
+		packetSize = ntohl(packetSize);
+		printf("packet size : %d\n", packetSize);
+
+		unsigned char* buff;
+		buff = new (std::nothrow) unsigned char[packetSize];
+		if (packetSize == ReadDataTcp(TcpConnectedPort, buff, packetSize)) {
+			int msgType = 0;
+			string userId = "";
+			string userPassword = "";
+			int authority = 0;
+
+			LoginProtocol* msgBuff = new LoginProtocol();
+			msgBuff->deSerialize(&msgType, userId, userPassword, &authority, buff, packetSize);
+
+			printf("msgType : %d\n", msgType);
+			printf("userId : %s\n", userId.c_str());
+			printf("userPassword : %s\n", userPassword.c_str());
+		}
+		delete(buff);
+	}
+*/
+
+/*
     unsigned int packetSize;
     if (ReadDataTcp(TcpConnectedPort, (unsigned char*)&packetSize, sizeof(packetSize)) != sizeof(packetSize))
 	{
@@ -117,7 +171,7 @@ int main(int argc, char *argv[])
 		printf("userId : %s\n", userId.c_str());
 		printf("userPassword : %s\n", userPassword.c_str());
 	}
-
+*/
 
    /*
 

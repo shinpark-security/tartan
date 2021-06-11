@@ -1,3 +1,3 @@
-g++ SendImageTCP.cpp ../Common/Protocol/ProtoBuff.cpp ../Common/Protocol/protocol.pb.cc ../Common/NetworkTCP.cpp ../Common/TcpSendRecvJpeg.cpp -o SendImageTCP -I/usr/local/include/opencv4/ -I../Common -L/usr/local/lib -lprotobuf -lprotobuf-lite -lopencv_core -lopencv_highgui -lopencv_imgcodecs -lopencv_imgproc -lopencv_video -lopencv_videoio
+g++ SendImageTCP.cpp ../Common/NetworkManager.cpp ../Common/Protocol/ProtocolManager.cpp ../Common/Protocol/ImageProtocol.cpp ../Common/Protocol/LoginProtocol.cpp ../Common/Protocol/Msg/protocolImage.pb.cc ../Common/Protocol/Msg/protocolLogin.pb.cc ../LgFaceRecDemoTCP_Jetson_NanoV2/src/NetworkTCP.cpp ../Common/TcpSendRecvJpeg.cpp -o SendImageTCP -I/usr/include/glib-2.0 -I/usr/lib/aarch64-linux-gnu/glib-2.0/include -I/usr/include/opencv4/ -I../Common -L/usr/local/lib -lglib-2.0 -lwolfssl -lprotobuf -lprotobuf-lite -lopencv_core -lopencv_highgui -lopencv_imgcodecs -lopencv_imgproc -lopencv_video -lopencv_videoio
 
 

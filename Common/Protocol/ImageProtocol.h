@@ -1,27 +1,26 @@
 #pragma once
 
 #include <string>
-#include "Msg/protocolLogin.pb.h"
+#include "Msg/protocolImage.pb.h"
 
 using namespace std;
 
-class LoginProtocol
+class ImageProtocol
 {
 private:
-	protocol_msg::LoginMsg msg;
+	protocol_msg::ImageMsg msg;
 public:
 	void setMsgType(const int type);
 	void setTimestamp(const long long time);
 	void setUserId(const string id);
-	void setUserPw(const string password);
-	void setAuthority(const int authority);
+	void setImage(const int imgSize, const char* imgData);
 	unsigned char* serializeToArray(unsigned char* buffer);
 	size_t getSize();
 
-	void deSerialize(int* msgType,
+	std::string deSerialize(int* msgType,
+		long long* timestamp,
 		string& userId,
-		string& passWord,
-		int* authority,
+		int* imgSize,
 		const unsigned char* serializedBuffer,
 		const int serializedBufferSize);
 };
