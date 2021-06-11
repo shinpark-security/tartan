@@ -34,6 +34,7 @@ typedef SSIZE_T ssize_t;
 #include <wolfssl/wolfio.h>
 #define CERT_FILE "/home/lg/certs/cert.pem"
 #define KEY_FILE  "/home/lg/certs/private.pem"
+#define CHAIN_CERT_FILE "/home/lg/certs/ca-cert.pem"
 #endif
 
 //------------------------------------------------------------------------------------------------
@@ -43,12 +44,12 @@ typedef SSIZE_T ssize_t;
 typedef struct
 {
  SOCKET_FD_TYPE ListenFd;
- WOLFSSL_CTX* ctx;
 } TTcpListenPort;
 
 typedef struct
 {
  SOCKET_FD_TYPE ConnectedFd;
+ WOLFSSL_CTX* ctx;
  WOLFSSL* ssl;
 } TTcpConnectedPort;
 
@@ -56,14 +57,13 @@ typedef struct
 //  Function Prototypes 
 //------------------------------------------------------------------------------------------------
 TTcpListenPort *OpenTcpListenPort(short localport);
-TTcpListenPort *OpenTcpListenPortTLS(short localport);
 void CloseTcpListenPort(TTcpListenPort **TcpListenPort);
-void CloseTcpListenPortTLS(TTcpListenPort **TcpListenPort);
 TTcpConnectedPort *AcceptTcpConnection(TTcpListenPort *TcpListenPort, 
                        struct sockaddr_in *cli_addr,socklen_t *clilen);
 TTcpConnectedPort *AcceptTcpConnectionTLS(TTcpListenPort *TcpListenPort, 
                        struct sockaddr_in *cli_addr,socklen_t *clilen);
 TTcpConnectedPort *OpenTcpConnection(const char *remotehostname, const char * remoteportno);
+TTcpConnectedPort *OpenTcpConnectionTLS(const char *remotehostname, const char * remoteportno);
 void CloseTcpConnectedPort(TTcpConnectedPort **TcpConnectedPort);
 void CloseTcpConnectedPortTLS(TTcpConnectedPort **TcpConnectedPort);
 ssize_t ReadDataTcp(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, size_t length);

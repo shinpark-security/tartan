@@ -16,102 +16,6 @@
 // OpenTCPListenPort - Creates a Listen TCP port to accept
 // connection requests
 //-----------------------------------------------------------------
-TTcpListenPort *OpenTcpListenPortTLS(short localport)
-{
-	TTcpListenPort *TcpListenPort;
-	struct sockaddr_in myaddr;
-
-	TcpListenPort= new (std::nothrow) TTcpListenPort;  
-
-	if (TcpListenPort==NULL)
-	{
-		fprintf(stderr, "TUdpPort memory allocation failed\n");
-		return(NULL);
-	}
-	TcpListenPort->ListenFd=BAD_SOCKET_FD;
-#if  defined(_WIN32) || defined(_WIN64)
-	WSADATA wsaData;
-	int     iResult;
-	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-	if (iResult != 0) 
-	{
-		delete TcpListenPort;
-		printf("WSAStartup failed: %d\n", iResult);
-		return(NULL);
-	}
-#endif
-
-	/* declare wolfSSL objects */
-	TcpListenPort->ctx = NULL;
-
-    /* Initialize wolfSSL */
-    wolfSSL_Init();
-
-	// create a socket
-	if ((TcpListenPort->ListenFd= socket(AF_INET, SOCK_STREAM, 0)) == BAD_SOCKET_FD)
-	{
-		CloseTcpListenPortTLS(&TcpListenPort);
-		perror("socket failed");
-		return(NULL);  
-	}
-	int option = 1; 
-
-	if(setsockopt(TcpListenPort->ListenFd,SOL_SOCKET,SO_REUSEADDR,(char*)&option,sizeof(option)) < 0)
-	{
-		CloseTcpListenPortTLS(&TcpListenPort);
-		perror("setsockopt failed");
-		return(NULL);
-	}
-
-	/* Create and initialize WOLFSSL_CTX */
-	if ((TcpListenPort->ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method())) == NULL) {
-		perror("ERROR: failed to create WOLFSSL_CTX");
-		CloseTcpListenPortTLS(&TcpListenPort);
-		return(NULL);
-	}
-
-	/* Load server certificates into WOLFSSL_CTX */
-	if (wolfSSL_CTX_use_certificate_file(TcpListenPort->ctx, CERT_FILE, WOLFSSL_FILETYPE_PEM)
-			!= WOLFSSL_SUCCESS) {
-		fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
-				CERT_FILE);
-		CloseTcpListenPortTLS(&TcpListenPort);
-		return(NULL);
-	}
-
-	/* Load server key into WOLFSSL_CTX */
-	if (wolfSSL_CTX_use_PrivateKey_file(TcpListenPort->ctx, KEY_FILE, WOLFSSL_FILETYPE_PEM)
-			!= WOLFSSL_SUCCESS) {
-		fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
-				KEY_FILE);
-		CloseTcpListenPortTLS(&TcpListenPort);
-		return(NULL);
-	}
-
-	// bind it to all local addresses and pick any port number
-	memset((char *)&myaddr, 0, sizeof(myaddr));
-	myaddr.sin_family = AF_INET;
-	myaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	myaddr.sin_port = htons(localport);
-
-	if (bind(TcpListenPort->ListenFd, (struct sockaddr *)&myaddr, sizeof(myaddr)) < 0)
-	{
-		CloseTcpListenPortTLS(&TcpListenPort);
-		perror("bind failed");
-		return(NULL); 
-	}
-
-
-	if (listen(TcpListenPort->ListenFd,5)< 0)
-	{
-		CloseTcpListenPortTLS(&TcpListenPort);
-		perror("bind failed");
-		return(NULL);	  
-	}
-
-	printf("Listing Success..\n");
-	return(TcpListenPort);
-}
 TTcpListenPort *OpenTcpListenPort(short localport)
 {
 	TTcpListenPort *TcpListenPort;
@@ -180,26 +84,6 @@ TTcpListenPort *OpenTcpListenPort(short localport)
 //-----------------------------------------------------------------
 // CloseTcpListenPort - Closes the specified TCP listen port
 //-----------------------------------------------------------------
-void CloseTcpListenPortTLS(TTcpListenPort **TcpListenPort)
-{
-	if ((*TcpListenPort)==NULL) return;
-
-	if ((*TcpListenPort)->ListenFd!=BAD_SOCKET_FD)  
-	{
-		CLOSE_SOCKET((*TcpListenPort)->ListenFd);
-		(*TcpListenPort)->ListenFd=BAD_SOCKET_FD;
-	}
-
-	if((*TcpListenPort)->ctx)
-		wolfSSL_CTX_free((*TcpListenPort)->ctx);
-
-	delete (*TcpListenPort);
-	(*TcpListenPort)=NULL;
-#if  defined(_WIN32) || defined(_WIN64)
-	WSACleanup();
-#endif
-	wolfSSL_Cleanup();
-}
 void CloseTcpListenPort(TTcpListenPort **TcpListenPort)
 {
 	if ((*TcpListenPort)==NULL) return;
@@ -261,8 +145,37 @@ TTcpConnectedPort *AcceptTcpConnectionTLS(TTcpListenPort *TcpListenPort,
 		return(NULL);
 	}
 
+	/* declare wolfSSL objects */
+	TcpConnectedPort->ctx = NULL;
+	
+	/* Create and initialize WOLFSSL_CTX */
+	if ((TcpConnectedPort->ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method())) == NULL) {
+		perror("ERROR: failed to create WOLFSSL_CTX");
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		return(NULL);
+	}
+
+	/* Load server certificates into WOLFSSL_CTX */
+	if (wolfSSL_CTX_use_certificate_file(TcpConnectedPort->ctx, CERT_FILE, WOLFSSL_FILETYPE_PEM)
+			!= WOLFSSL_SUCCESS) {
+		fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
+				CERT_FILE);
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		return(NULL);
+	}
+
+	/* Load server key into WOLFSSL_CTX */
+	if (wolfSSL_CTX_use_PrivateKey_file(TcpConnectedPort->ctx, KEY_FILE, WOLFSSL_FILETYPE_PEM)
+			!= WOLFSSL_SUCCESS) {
+		fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
+				KEY_FILE);
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		return(NULL);
+	}
+
+
 	/* Create a WOLFSSL object */
-	if ((TcpConnectedPort->ssl = wolfSSL_new(TcpListenPort->ctx)) == NULL) {
+	if ((TcpConnectedPort->ssl = wolfSSL_new(TcpConnectedPort->ctx)) == NULL) {
 		perror("ERROR: failed to create WOLFSSL object");
 		CloseTcpConnectedPortTLS(&TcpConnectedPort);
 		return(NULL);
@@ -429,14 +342,17 @@ void CloseTcpConnectedPortTLS(TTcpConnectedPort **TcpConnectedPort)
 {
 	if ((*TcpConnectedPort)==NULL) return;
 
-	if((*TcpConnectedPort)->ssl)
-		wolfSSL_free((*TcpConnectedPort)->ssl);
-
 	if ((*TcpConnectedPort)->ConnectedFd!=BAD_SOCKET_FD)  
 	{
 		CLOSE_SOCKET((*TcpConnectedPort)->ConnectedFd);
 		(*TcpConnectedPort)->ConnectedFd=BAD_SOCKET_FD;
 	}
+	
+	if((*TcpConnectedPort)->ssl)
+		wolfSSL_free((*TcpConnectedPort)->ssl);
+	if((*TcpConnectedPort)->ctx)
+		wolfSSL_CTX_free((*TcpConnectedPort)->ctx);
+
 	delete (*TcpConnectedPort);
 	(*TcpConnectedPort)=NULL;
 #if  defined(_WIN32) || defined(_WIN64)

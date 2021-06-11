@@ -43,12 +43,12 @@ typedef SSIZE_T ssize_t;
 typedef struct
 {
  SOCKET_FD_TYPE ListenFd;
- WOLFSSL_CTX* ctx;
 } TTcpListenPort;
 
 typedef struct
 {
  SOCKET_FD_TYPE ConnectedFd;
+ WOLFSSL_CTX* ctx;
  WOLFSSL* ssl;
 } TTcpConnectedPort;
 
@@ -56,9 +56,7 @@ typedef struct
 //  Function Prototypes 
 //------------------------------------------------------------------------------------------------
 TTcpListenPort *OpenTcpListenPort(short localport);
-TTcpListenPort *OpenTcpListenPortTLS(short localport);
 void CloseTcpListenPort(TTcpListenPort **TcpListenPort);
-void CloseTcpListenPortTLS(TTcpListenPort **TcpListenPort);
 TTcpConnectedPort *AcceptTcpConnection(TTcpListenPort *TcpListenPort, 
                        struct sockaddr_in *cli_addr,socklen_t *clilen);
 TTcpConnectedPort *AcceptTcpConnectionTLS(TTcpListenPort *TcpListenPort, 

@@ -65,40 +65,73 @@ int main(int argc, char *argv[])
   snprintf(passwd,20,user_pass);
   printf("name=[%s]\n",name);
   printf("passwd=[%s]\n",passwd);
+  bool tls_mode = 0;
 
 
-   if (argc !=3) 
+   if (argc !=4) 
     {
-       fprintf(stderr,"usage %s hostname port\n", argv[0]);
+       fprintf(stderr,"usage %s hostname port mode\n", argv[0]);
        exit(0);
     }
 
-  if  ((TcpConnectedPort=OpenTcpConnection(argv[1],argv[2]))==NULL)  // Open UDP Network port
-     {
-       printf("OpenTcpConnection\n");
-       return(-1); 
-     }
+   if(argv[3] == "1") {
+	   tls_mode = true;
+   }
+
+   if(tls_mode == true) {
+	   wolfSSL_Init();
+   }
+
+   if(tls_mode == true) {
+	   if  ((TcpConnectedPort=OpenTcpConnectionTLS(argv[1],argv[2]))==NULL)  // Open UDP Network port
+	   {
+		   printf("OpenTcpConnection\n");
+		   return(-1); 
+	   }
+   } else {
+	   if  ((TcpConnectedPort=OpenTcpConnection(argv[1],argv[2]))==NULL)  // Open UDP Network port
+	   {
+		   printf("OpenTcpConnection\n");
+		   return(-1); 
+	   }
+   }
 
  
   printf("sizeof total real packet size=%d\n", pkt->hdr.size);
 
-  WriteDataTcp(TcpConnectedPort, (unsigned char*)pkt, pkt->hdr.size);
+  if(tls_mode == true) {
+	  WriteDataTcpTLS(TcpConnectedPort, (unsigned char*)pkt, pkt->hdr.size);
+  } else {
+	  WriteDataTcp(TcpConnectedPort, (unsigned char*)pkt, pkt->hdr.size);
+  }
 
   delete pkt;
 
   namedWindow( "Server", WINDOW_AUTOSIZE );// Create a window for display.
  
   Mat Image;
-do {
-    retvalue=TcpRecvImageAsJpeg(TcpConnectedPort,&Image);
-   
-    if( retvalue) imshow( "Server", Image ); // If a valid image is received then display it
-    else break;
+  do {
+	  if(tls_mode == true) {
+		  retvalue=TcpRecvImageAsJpegTLS(TcpConnectedPort,&Image);
+	  } else {
+		  retvalue=TcpRecvImageAsJpeg(TcpConnectedPort,&Image);
+	  }
 
-   } while (waitKey(10) != 'q'); // loop until user hits quit
+	  if( retvalue) imshow( "Server", Image ); // If a valid image is received then display it
+	  else break;
 
- CloseTcpConnectedPort(&TcpConnectedPort); // Close network port;
- return 0; 
+  } while (waitKey(10) != 'q'); // loop until user hits quit
+
+  if(tls_mode == true) {
+	  CloseTcpConnectedPort(&TcpConnectedPort); // Close network port;
+  } else {
+	  CloseTcpConnectedPort(&TcpConnectedPort); // Close network port;
+  }
+
+  if(tls_mode == true) {
+	  wolfSSL_Cleanup();
+  }
+  return 0; 
 }
 //-----------------------------------------------------------------
 // END main

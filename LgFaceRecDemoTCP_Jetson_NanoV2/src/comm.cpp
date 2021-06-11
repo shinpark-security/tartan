@@ -25,16 +25,14 @@ CComm::CComm(gboolean tls, int port, GAsyncQueue *q)
     if (tls)
     {
         printf("TLS MODE\n");
-        open_tcp_listen_port = OpenTcpListenPortTLS;
-        close_tcp_listen_port = CloseTcpListenPortTLS;
-        accept_tcp_connection = AcceptTcpConnectionTLS;
-        close_tcp_connected_port = CloseTcpConnectedPortTLS;
-        read_data_tcp = ReadDataTcpTLS;
-        write_data_tcp = WriteDataTcpTLS;
-        tcp_send_image_as_jpeg = TcpSendImageAsJpegTLS;
-    }
-    else
-    {
+        open_tcp_listen_port=OpenTcpListenPort;
+        close_tcp_listen_port=CloseTcpListenPort;
+        accept_tcp_connection=AcceptTcpConnectionTLS;
+        close_tcp_connected_port=CloseTcpConnectedPortTLS;
+        read_data_tcp=ReadDataTcpTLS;
+        write_data_tcp=WriteDataTcpTLS;
+        tcp_send_image_as_jpeg=TcpSendImageAsJpegTLS;
+    } else {
         printf("NON TLS MODE\n");
         open_tcp_listen_port = OpenTcpListenPort;
         close_tcp_listen_port = CloseTcpListenPort;

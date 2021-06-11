@@ -149,8 +149,7 @@ gpointer main_thread(gpointer data)
 		}
 		// printf("main thread...\n");
 #if 1 //temp for test
-		// psbd->pimgproc->set_enable_send(psbd->pcom->tcp_connected);
-		// psbd->pimgproc->set_enable_send(psbd->pcom_tls->tcp_connected);
+		psbd->pimgproc->set_enable_send(true);
 #endif
 	}
 
@@ -158,8 +157,10 @@ gpointer main_thread(gpointer data)
 	{
 		psbd->pcom->stop();
 	}
-	if (psbd->pimgproc)
-	{
+	if (psbd->pcom_tls) {
+		psbd->pcom_tls->stop();
+	}
+	if (psbd->pimgproc) {
 		psbd->pimgproc->stop();
 	}
 }
@@ -216,6 +217,9 @@ int main(int argc, char *argv[])
 	else
 		sbd.pimgproc = new CImgProc();
 
+    /* Initialize wolfSSL */
+    wolfSSL_Init();
+
 	sbd.mainloop = g_main_loop_new(nullptr, false);
 	if (sbd.mainloop != nullptr)
 	{
@@ -258,5 +262,7 @@ int main(int argc, char *argv[])
 		delete sbd.pimgproc;
 		sbd.pimgproc = nullptr;
 	}
+	
+	wolfSSL_Cleanup();
 	return 0;
 }
