@@ -32,8 +32,8 @@ typedef SSIZE_T ssize_t;
 #include <wolfssl/options.h>
 #include <wolfssl/ssl.h>
 #include <wolfssl/wolfio.h>
-#define CERT_FILE "../certs/cert.pem"
-#define KEY_FILE  "../certs/private.pem"
+#define CERT_FILE "/home/lg/certs/cert.pem"
+#define KEY_FILE  "/home/lg/certs/private.pem"
 #endif
 
 //------------------------------------------------------------------------------------------------

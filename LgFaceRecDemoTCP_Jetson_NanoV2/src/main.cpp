@@ -176,14 +176,17 @@ gboolean thread_stop(tServiceData *psbd)
 int main(int argc, char *argv[])
 {
 	// CMydb db;
-	// db.start();
-	// db.initialize_database();
-	// db.list_alluser();
-	// CAuth auth;	
+	// // db.start();
+	// // db.initialize_database_faces();
+	// db.list_faces();
+	// // db.list_alluser();
 
-	// int ret=db.check_passwd("lg",auth.get_passwd_enc("lg1234"));
-	// printf("RET=%d\n", ret);
-	// // auth.get_passwd_enc("lg1234");
+	// return 0;
+	// // CAuth auth;	
+
+	// // int ret=db.check_passwd("lg",auth.get_passwd_enc("lg1234"));
+	// // printf("RET=%d\n", ret);
+	// // // auth.get_passwd_enc("lg1234");
 	tServiceData sbd;
 	sbd.queue = g_async_queue_new ();
 	sbd.pcom=new CComm(false,TCP_PORT_NON_SECURE,sbd.queue);
