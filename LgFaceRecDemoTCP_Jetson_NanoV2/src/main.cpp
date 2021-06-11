@@ -153,15 +153,15 @@ gpointer main_thread(gpointer data)
 #endif
 	}
 
+	if (psbd->pimgproc) {
+		psbd->pimgproc->stop();
+	}
 	if (psbd->pcom)
 	{
 		psbd->pcom->stop();
 	}
 	if (psbd->pcom_tls) {
 		psbd->pcom_tls->stop();
-	}
-	if (psbd->pimgproc) {
-		psbd->pimgproc->stop();
 	}
 }
 

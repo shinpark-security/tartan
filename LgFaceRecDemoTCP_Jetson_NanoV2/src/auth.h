@@ -11,7 +11,6 @@ class CAuth
 public:
     CAuth();
     ~CAuth();
-    string get_passwd_enc(string pass);
     int login(string id, string passwd);
 };
 

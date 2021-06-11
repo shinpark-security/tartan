@@ -416,13 +416,13 @@ ssize_t ReadDataTcp(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, siz
 		accumulated+=bytes;
 		if (i==0) {
 			Packet *p=(Packet*)data;
-			printf("Length=%d received=%d header=%4s packet_length=%d\n", length, bytes, p->hdr.head, p->hdr.size);
+			printf("Length=%zu received=%zu header=%4s packet_length=%d\n", length, bytes, p->hdr.head, p->hdr.size);
 			if (p->hdr.head[0]=='S' && p->hdr.head[1]=='B' && p->hdr.head[2]=='1' && p->hdr.head[3]=='T') {
 				my_packet_size=p->hdr.size;
 			}
 			print_pkt_header(data,60);
 		}
-		printf("accumulated packets=%u   my_packet_size=%u\n",accumulated, my_packet_size );
+		printf("accumulated packets=%zu   my_packet_size=%zu\n",accumulated, my_packet_size );
 		if (accumulated>=my_packet_size)
 			return accumulated;
 	}
