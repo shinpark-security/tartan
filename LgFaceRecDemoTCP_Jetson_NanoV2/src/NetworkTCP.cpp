@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "NetworkTCP.h"
-#include "mymsg.h"
+#include "ProtocolManager.h"
 
 //-----------------------------------------------------------------
 // OpenTCPListenPort - Creates a Listen TCP port to accept
@@ -119,32 +119,7 @@ TTcpConnectedPort *AcceptTcpConnectionTLS(TTcpListenPort *TcpListenPort,
 		return(NULL);
 	}
 	
-	/* Create and initialize WOLFSSL_CTX */
-	if ((TcpConnectedPort->ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method())) == NULL) {
-		perror("ERROR: failed to create WOLFSSL_CTX");
-		CloseTcpConnectedPortTLS(&TcpConnectedPort);
-		return(NULL);
-	}
-
-	/* Load server certificates into WOLFSSL_CTX */
-	if (wolfSSL_CTX_use_certificate_file(TcpConnectedPort->ctx, CERT_FILE, WOLFSSL_FILETYPE_PEM)
-			!= WOLFSSL_SUCCESS) {
-		fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
-				CERT_FILE);
-		CloseTcpConnectedPortTLS(&TcpConnectedPort);
-		return(NULL);
-	}
-
-	/* Load server key into WOLFSSL_CTX */
-	if (wolfSSL_CTX_use_PrivateKey_file(TcpConnectedPort->ctx, KEY_FILE, WOLFSSL_FILETYPE_PEM)
-			!= WOLFSSL_SUCCESS) {
-		fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
-				KEY_FILE);
-		CloseTcpConnectedPortTLS(&TcpConnectedPort);
-		return(NULL);
-	}
-	
-	TcpConnectedPort->ConnectedFd= accept(TcpListenPort->ListenFd,
+		TcpConnectedPort->ConnectedFd= accept(TcpListenPort->ListenFd,
 			(struct sockaddr *) cli_addr,clilen);
 
 	if (TcpConnectedPort->ConnectedFd== BAD_SOCKET_FD) 
@@ -169,6 +144,35 @@ TTcpConnectedPort *AcceptTcpConnectionTLS(TTcpListenPort *TcpListenPort,
 		perror("setsockopt SO_SNDBUF failed");
 		return(NULL);
 	}
+
+	/* declare wolfSSL objects */
+	TcpConnectedPort->ctx = NULL;
+	
+	/* Create and initialize WOLFSSL_CTX */
+	if ((TcpConnectedPort->ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method())) == NULL) {
+		perror("ERROR: failed to create WOLFSSL_CTX");
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		return(NULL);
+	}
+
+	/* Load server certificates into WOLFSSL_CTX */
+	if (wolfSSL_CTX_use_certificate_file(TcpConnectedPort->ctx, CERT_FILE, WOLFSSL_FILETYPE_PEM)
+			!= WOLFSSL_SUCCESS) {
+		fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
+				CERT_FILE);
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		return(NULL);
+	}
+
+	/* Load server key into WOLFSSL_CTX */
+	if (wolfSSL_CTX_use_PrivateKey_file(TcpConnectedPort->ctx, KEY_FILE, WOLFSSL_FILETYPE_PEM)
+			!= WOLFSSL_SUCCESS) {
+		fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
+				KEY_FILE);
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		return(NULL);
+	}
+
 
 	/* Create a WOLFSSL object */
 	if ((TcpConnectedPort->ssl = wolfSSL_new(TcpConnectedPort->ctx)) == NULL) {
@@ -238,6 +242,139 @@ TTcpConnectedPort *AcceptTcpConnection(TTcpListenPort *TcpListenPort,
 // OpenTCPConnection - Creates a TCP Connection to a TCP port
 // accepting connection requests
 //-----------------------------------------------------------------
+TTcpConnectedPort *OpenTcpConnectionTLS(const char *remotehostname, const char * remoteportno)
+{
+	TTcpConnectedPort *TcpConnectedPort;
+	struct sockaddr_in myaddr;
+	int                s;
+	struct addrinfo   hints;
+	struct addrinfo   *result = NULL;
+
+	TcpConnectedPort= new (std::nothrow) TTcpConnectedPort;  
+
+	if (TcpConnectedPort==NULL)
+	{
+		fprintf(stderr, "TUdpPort memory allocation failed\n");
+		return(NULL);
+	}
+	TcpConnectedPort->ConnectedFd=BAD_SOCKET_FD;
+#if  defined(_WIN32) || defined(_WIN64)
+	WSADATA wsaData;
+	int     iResult;
+	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (iResult != 0) 
+	{
+		delete TcpConnectedPort;
+		printf("WSAStartup failed: %d\n", iResult);
+		return(NULL);
+	}
+#endif
+	// create a socket
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+
+	s = getaddrinfo(remotehostname, remoteportno, &hints, &result);
+	if (s != 0) 
+	{
+		delete TcpConnectedPort;
+		fprintf(stderr, "getaddrinfo: Failed\n");
+		return(NULL);
+	}
+	if ( result==NULL)
+	{
+		delete TcpConnectedPort;
+		fprintf(stderr, "getaddrinfo: Failed\n");
+		return(NULL);
+	}
+	if ((TcpConnectedPort->ConnectedFd= socket(AF_INET, SOCK_STREAM, 0)) == BAD_SOCKET_FD)
+	{
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		freeaddrinfo(result);
+		perror("socket failed");
+		return(NULL);  
+	}
+
+	int bufsize = 200 * 1024;
+	if (setsockopt(TcpConnectedPort->ConnectedFd, SOL_SOCKET,
+				SO_SNDBUF, (char *)&bufsize, sizeof(bufsize)) == -1)
+	{
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		perror("setsockopt SO_SNDBUF failed");
+		return(NULL);
+	}
+	if (setsockopt(TcpConnectedPort->ConnectedFd, SOL_SOCKET, 
+				SO_RCVBUF, (char *)&bufsize, sizeof(bufsize)) == -1)
+	{
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		perror("setsockopt SO_SNDBUF failed");
+		return(NULL);
+	}
+
+	timeval tv;
+	tv.tv_sec  = 2;
+	tv.tv_usec = 0;
+	if (setsockopt(TcpConnectedPort->ConnectedFd, SOL_SOCKET, SO_RCVTIMEO,(char*)&tv, sizeof(timeval)) == -1)
+	{
+		CloseTcpConnectedPort(&TcpConnectedPort);
+		perror("setsockopt SO_RCVTIMEO failed");
+		return(NULL);
+	}	
+
+	if (connect(TcpConnectedPort->ConnectedFd,result->ai_addr,result->ai_addrlen) < 0) 
+	{
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		freeaddrinfo(result);
+		perror("connect failed");
+		return(NULL);
+	}
+
+	freeaddrinfo(result);	 
+	
+	/*---------------------------------*/
+	/* Start of security */
+	/*---------------------------------*/
+	/* Create and initialize WOLFSSL_CTX */
+	if ((TcpConnectedPort->ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method())) == NULL) {
+		fprintf(stderr, "ERROR: failed to create WOLFSSL_CTX\n");
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		return(NULL);
+	}
+
+	/* Load client certificates into WOLFSSL_CTX */
+	if (wolfSSL_CTX_load_verify_locations(TcpConnectedPort->ctx, CHAIN_CERT_FILE, NULL)
+			!= WOLFSSL_SUCCESS) {
+		fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
+				CERT_FILE);
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		return(NULL);
+	}
+
+	/* Create a WOLFSSL object */
+	if ((TcpConnectedPort->ssl = wolfSSL_new(TcpConnectedPort->ctx)) == NULL) {
+		fprintf(stderr, "ERROR: failed to create WOLFSSL object\n");
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		return(NULL);
+	}
+
+	/* Attach wolfSSL to the socket */
+	if (wolfSSL_set_fd(TcpConnectedPort->ssl, TcpConnectedPort->ConnectedFd) != WOLFSSL_SUCCESS) {
+		fprintf(stderr, "ERROR: Failed to set the file descriptor\n");
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		return(NULL);
+	}
+
+	/* Connect to wolfSSL on the server side */
+	if (wolfSSL_connect(TcpConnectedPort->ssl) != WOLFSSL_SUCCESS) {
+		fprintf(stderr, "ERROR: failed to connect to wolfSSL\n");
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		return(NULL);
+	}
+
+
+	return(TcpConnectedPort);
+}
 TTcpConnectedPort *OpenTcpConnection(const char *remotehostname, const char * remoteportno)
 {
 	TTcpConnectedPort *TcpConnectedPort;
@@ -338,19 +475,18 @@ void CloseTcpConnectedPortTLS(TTcpConnectedPort **TcpConnectedPort)
 {
 	if ((*TcpConnectedPort)==NULL) return;
 	
-	if((*TcpConnectedPort)->ssl) {
-		wolfSSL_free((*TcpConnectedPort)->ssl);
-	}
-	if((*TcpConnectedPort)->ctx) {
-		wolfSSL_CTX_free((*TcpConnectedPort)->ctx);
-	}
-
 	if ((*TcpConnectedPort)->ConnectedFd!=BAD_SOCKET_FD)  
 	{
 		CLOSE_SOCKET((*TcpConnectedPort)->ConnectedFd);
 		(*TcpConnectedPort)->ConnectedFd=BAD_SOCKET_FD;
 	}
-	
+
+	if((*TcpConnectedPort)->ssl) {
+		wolfSSL_free((*TcpConnectedPort)->ssl);
+	}
+	if((*TcpConnectedPort)->ctx) {
+		wolfSSL_CTX_free((*TcpConnectedPort)->ctx);
+	}	
 	delete (*TcpConnectedPort);
 	(*TcpConnectedPort)=NULL;
 #if  defined(_WIN32) || defined(_WIN64)
@@ -391,6 +527,8 @@ void print_pkt_header(const unsigned char* buff,int size) {
 ssize_t ReadDataTcpTLS(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, size_t length)
 {
 	ssize_t bytes;
+	ssize_t my_packet_size=-1;
+	ssize_t accumulated=0;
 
 	for (size_t i = 0; i < length; i += bytes)
 	{
@@ -398,13 +536,38 @@ ssize_t ReadDataTcpTLS(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, 
 		{
 			return (-1);
 		}
+		accumulated+=bytes;
+		if (i==0) {
+			MyPacket *p=(MyPacket*)data;
+			printf("max packet length=%zu received=%zu packet_length=%d timestamp=%u msgtype=%d\n", 
+						length, bytes, p->hdr.size , p->hdr.timestamp, p->hdr.msgtype);
+			if (p->hdr.head[0]=='S' && p->hdr.head[1]=='B' && p->hdr.head[2]=='1' && p->hdr.head[3]=='T') {
+				my_packet_size=p->hdr.size;
+			}
+			// print_pkt_header(data,60);
+		}
+		if (my_packet_size==-1) {
+			MyPacket *p=(MyPacket*)(data+i);
+			if (p->hdr.head[0]=='S' && p->hdr.head[1]=='B' && p->hdr.head[2]=='1' && p->hdr.head[3]=='T') {
+				my_packet_size=p->hdr.size;
+				printf("Found Header\n");
+				memcpy(data,data+i,bytes);
+				i=0;
+				accumulated=bytes;
+			}
+		}
+		printf("accumulated packets=%zu   my_packet_size=%zd\n",accumulated, my_packet_size );
+		if (my_packet_size>0 && accumulated>=my_packet_size)
+			return accumulated;
 	}
-	return(length);
+	return(length);	
 }
+
+
 ssize_t ReadDataTcp(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, size_t length)
 {
 	ssize_t bytes;
-	ssize_t my_packet_size=0;
+	ssize_t my_packet_size=-1;
 	ssize_t accumulated=0;
 
 	for (size_t i = 0; i < length; i += bytes)
@@ -415,15 +578,26 @@ ssize_t ReadDataTcp(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, siz
 		}
 		accumulated+=bytes;
 		if (i==0) {
-			Packet *p=(Packet*)data;
-			printf("Length=%zu received=%zu header=%4s packet_length=%d\n", length, bytes, p->hdr.head, p->hdr.size);
+			MyPacket *p=(MyPacket*)data;
+			printf("max packet length=%zu received=%zu packet_length=%d timestamp=%u msgtype=%d\n", 
+						length, bytes, p->hdr.size , p->hdr.timestamp, p->hdr.msgtype);
 			if (p->hdr.head[0]=='S' && p->hdr.head[1]=='B' && p->hdr.head[2]=='1' && p->hdr.head[3]=='T') {
 				my_packet_size=p->hdr.size;
 			}
-			print_pkt_header(data,60);
+			// print_pkt_header(data,60);
 		}
-		printf("accumulated packets=%zu   my_packet_size=%zu\n",accumulated, my_packet_size );
-		if (accumulated>=my_packet_size)
+		if (my_packet_size==-1) {
+			MyPacket *p=(MyPacket*)(data+i);
+			if (p->hdr.head[0]=='S' && p->hdr.head[1]=='B' && p->hdr.head[2]=='1' && p->hdr.head[3]=='T') {
+				my_packet_size=p->hdr.size;
+				printf("Found Header\n");
+				memcpy(data,data+i,bytes);
+				i=0;
+				accumulated=bytes;
+			}
+		}
+		printf("accumulated packets=%zu   my_packet_size=%zd\n",accumulated, my_packet_size );
+		if (my_packet_size>0 && accumulated>=my_packet_size)
 			return accumulated;
 	}
 	return(length);

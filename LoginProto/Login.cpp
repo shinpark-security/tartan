@@ -13,7 +13,7 @@
 #include <iostream>
 #include "NetworkTCP.h"
 #include "TcpSendRecvJpeg.h"
-#include "../Common/Protocol/LoginProtocol.h"
+#include "../Common/Protocol/MyProtocol.h"
 
 using namespace cv;
 using namespace std;

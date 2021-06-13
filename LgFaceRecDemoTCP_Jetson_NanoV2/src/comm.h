@@ -40,7 +40,7 @@ public:
     gboolean send_response(const unsigned char *buff, size_t len);
 
     static gpointer comm_thread(gpointer data);
-    gboolean send_msg_connected(gboolean connected);
+    gboolean send_msg_to_main_connected(gboolean connected);
     open_tcp_listen_port_func open_tcp_listen_port;
     close_tcp_listen_port_func close_tcp_listen_port;
     accept_tcp_connection_func accept_tcp_connection;

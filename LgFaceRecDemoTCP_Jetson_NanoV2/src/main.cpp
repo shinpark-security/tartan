@@ -15,6 +15,10 @@
 #include "imgproc.h"
 #include "comm.h"
 #include "mydb.h"
+#include "cyper.h"
+#include "ProtocolManager.h"
+#include "BaseProtocol.h"
+#include "MyProtocol.h"
 
 gboolean thread_start(tServiceData *psbd);
 gboolean thread_stop(tServiceData *psbd);
@@ -57,6 +61,9 @@ gboolean thread_start(tServiceData *psbd)
 	return ret;
 }
 
+
+
+
 gpointer main_thread(gpointer data)
 {
 	if (data == nullptr)
@@ -65,7 +72,7 @@ gpointer main_thread(gpointer data)
 
 	psbd->pcom->start();
 	psbd->pcom_tls->start();
-	psbd->pimgproc->start(psbd->queue);
+	psbd->pimgproc->start();
 
 	while (psbd->thread_run)
 	{
@@ -89,19 +96,22 @@ gpointer main_thread(gpointer data)
 				pmsg->mat.release();
 			}
 			break;
-			case MYMSG_CONTROL:
+			case MYMSG_FROM_CLIENT:
 			{
 				// printf("MSG:%d\n",pmsg->msgid);
-				char *cmd = (char *)pmsg->pdata;
+				// char *cmd = (char *)pmsg->pdata;
 				CComm *pcom = (CComm *)pmsg->pobj;
-				printf("CONTROL MESSAGE RECEIVED: %10s\n", cmd);
+				CBaseProtocol *pbase=(CBaseProtocol *)pmsg->pdata;
+				// printf("CONTROL MESSAGE RECEIVED: %10s\n", cmd);
 				// psbd->pcom->send_response((const unsigned char *)"response",5);
 				// psbd->pimgproc->add_new_user("dolmangi");
-				if (cmd[0] == '1')
+				printf("MYMSG_FROM_CLIENT msg_type=%d\n", pbase->msg_type);
+				if (pbase->msg_type == MSG_LOGIN)
 				{
-					char *account = &cmd[1];
-					char *passwd = &cmd[21];
-					printf("ACCOUNT=%s PASSWORD=%s\n ", account, passwd);
+					CLoginProtocol *plogin=dynamic_cast<CLoginProtocol*>(pbase);
+					string account=plogin->msg.user_id();
+					string passwd=plogin->msg.password();
+					printf("ACCOUNT=%s PASSWORD=%s\n ", account.c_str(), passwd.c_str());
 					CAuth auth;
 					int priv = auth.login(account, passwd);
 					if (priv == 0)
@@ -122,7 +132,36 @@ gpointer main_thread(gpointer data)
 							pcom->disconnect();
 					}
 				}
-				delete cmd;
+				else if (pbase->msg_type == MSG_SERVER_SETTING)
+				{
+					CServerSettingProtocol *ctl=dynamic_cast<CServerSettingProtocol*>(pbase);
+
+					printf("Server Setting MODE=%d\n ", ctl->msg.mode());
+
+					if (ctl->msg.mode() == protocol_msg::ServerSetting::CAM_STOP) {
+						psbd->pimgproc->set_enable_send(false);
+					}
+					else if (ctl->msg.mode() == protocol_msg::ServerSetting::CAM_START) {
+						psbd->pimgproc->set_enable_send(true);
+					}
+				}
+				else if (pbase->msg_type == MSG_CONTROL_MODE)
+				{
+					CControlModeProtocol *ctl=dynamic_cast<CControlModeProtocol*>(pbase);
+
+					printf("Control MODE=%d\n ", ctl->msg.mode());
+
+					if (ctl->msg.mode() == protocol_msg::ControlMode::RUN) {
+						psbd->pimgproc->set_enable_send(false);
+					}
+					else if (ctl->msg.mode() == protocol_msg::ControlMode::LEARNING) {
+						psbd->pimgproc->set_enable_send(false);
+					}
+					else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN) {
+						psbd->pimgproc->set_enable_send(false);
+					}
+				}
+				delete pbase;
 			}
 			break;
 			case MYMSG_NET_CONNECTED:
@@ -149,7 +188,7 @@ gpointer main_thread(gpointer data)
 		}
 		// printf("main thread...\n");
 #if 1 //temp for test
-		psbd->pimgproc->set_enable_send(true);
+		// psbd->pimgproc->set_enable_send(true);
 #endif
 	}
 
@@ -192,16 +231,38 @@ gboolean thread_stop(tServiceData *psbd)
 	return ret;
 }
 
+extern void print_pkt_header(const unsigned char* buff,int size) ;
+
 int main(int argc, char *argv[])
 {
-	// CMydb db;
-	// // db.start();
-	// // db.initialize_database_faces();
-	// db.list_faces();
-	// // db.list_alluser();
+	// // CMydb db;
+	// // // db.start();
+	// // // db.initialize_database_faces();
+	// // db.list_faces();
+	// // // db.list_alluser();
+
+	// // return 0;
+	// // // CAuth auth;
+	// CCyper cyp;
+	// unsigned char a[50];
+	// unsigned char b[50];
+	// memset(a,0,50);
+	// memset(b,0,50);
+	// sprintf((char*)&a[0],"1234567890123456");
+	// cyp.encrypt_aes(a,strlen((char*)a), b);
+	// print_pkt_header(b,50);
+	// printf("len a=%zu\n",strlen((char*)a));
+	// printf("len b=%zu\n",strlen((char*)b));
+
+	// int len=strlen((char*)a)/16 * 16 + (strlen((char*)a) % 16 ? 16 :0 ); 
+	// printf("original len=%d  cal len=%d\n", strlen((char*)a), len );
+	// memset(a,0,50);
+	// cyp.decrypt_aes(b, 32, a);
+	// print_pkt_header(a,50);
+	// printf("a=%s\n", a);
 
 	// return 0;
-	// // CAuth auth;
+
 
 	// // int ret=db.check_passwd("lg",auth.get_passwd_enc("lg1234"));
 	// // printf("RET=%d\n", ret);
@@ -212,10 +273,10 @@ int main(int argc, char *argv[])
 	sbd.pcom_tls = new CComm(true, TCP_PORT_SECURE, sbd.queue);
 	if (argc == 2)
 	{
-		sbd.pimgproc = new CImgProc(argv[1]);
+		sbd.pimgproc = new CImgProc(sbd.queue , argv[1]);
 	}
 	else
-		sbd.pimgproc = new CImgProc();
+		sbd.pimgproc = new CImgProc(sbd.queue );
 
     /* Initialize wolfSSL */
     wolfSSL_Init();

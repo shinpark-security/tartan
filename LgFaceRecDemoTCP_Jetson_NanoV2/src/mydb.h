@@ -4,6 +4,7 @@
 #include <string>
 #include <sqlite3.h>
 #include <vector>
+#include "cyper.h"
 using namespace std;
 
 typedef struct {
@@ -16,6 +17,7 @@ class CMydb {
 public:
     CMydb();
     ~CMydb();
+    CCyper cyp;
     gboolean start();
     gboolean initialize_database_account();
     gboolean initialize_database_faces();

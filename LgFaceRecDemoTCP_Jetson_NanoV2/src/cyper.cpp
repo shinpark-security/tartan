@@ -24,24 +24,23 @@ CCyper::~CCyper()
 }
 
 
-gboolean 
+int 
 CCyper::encrypt_aes(const unsigned char *inbuff, ssize_t len,  unsigned char *outbuff)
 {
     memset(iv, 0, sizeof(iv)); // init iv
-    AES_set_encrypt_key(key32, KEY_BIT, &aes_ks3);
+    int ret=AES_set_encrypt_key(key32, KEY_BIT, &aes_ks3);
+    if (ret<0) return ret;
     AES_cbc_encrypt(inbuff, outbuff, len, &aes_ks3, iv, AES_ENCRYPT);
-
-    return true;
+    return len/16 * 16 + (len % 16 ? 16 :0 ); ;
 }
 
-gboolean
+int
 CCyper::decrypt_aes(const unsigned char *inbuff, ssize_t len, unsigned char *outbuff)
 {
     memset(iv, 0, sizeof(iv)); // the same iv
-    AES_set_decrypt_key(key32, KEY_BIT, &aes_ks3);
+    int ret = AES_set_decrypt_key(key32, KEY_BIT, &aes_ks3);
     AES_cbc_encrypt(inbuff, outbuff, len, &aes_ks3, iv, AES_DECRYPT);
-
-    return true;
+    return ret;
 }
 
 string

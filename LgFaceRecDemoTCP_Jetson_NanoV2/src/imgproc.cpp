@@ -21,16 +21,18 @@
 #include "imgproc.h"
 #include "mydb.h"
 
-CImgProc::CImgProc()
+CImgProc::CImgProc(GAsyncQueue *q)
 {
+    main_queue = q;
     thread_run = true;
     main_queue = nullptr;
     camera_dev = "";
     imgproc_queue = g_async_queue_new();
 }
 
-CImgProc::CImgProc(string dev)
+CImgProc::CImgProc(GAsyncQueue *q,string dev)
 {
+    main_queue = q;
     thread_run = true;
     main_queue = nullptr;
     camera_dev = dev;
@@ -43,9 +45,8 @@ CImgProc::~CImgProc()
 }
 
 gboolean
-CImgProc::start(GAsyncQueue *q)
+CImgProc::start()
 {
-    main_queue = q;
     thread = g_thread_new("imgproc_thread", imgproc_thread, this);
     if (thread != nullptr)
     {

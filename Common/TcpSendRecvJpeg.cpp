@@ -8,7 +8,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include "TcpSendRecvJpeg.h"
 //#include "Protocol/ProtoBuff.h"
-#include "NetworkManager.h"
+// #include "NetworkManager.h"
 
 static  int init_values[2] = { cv::IMWRITE_JPEG_QUALITY,80 }; //default(95) 0-100
 static  std::vector<int> param (&init_values[0], &init_values[0]+2);
@@ -21,6 +21,7 @@ static  std::vector<uchar> sendbuff;//buffer for coding
 //-----------------------------------------------------------------
 int TcpSendImageAsJpeg(TTcpConnectedPort * TcpConnectedPort,cv::Mat Image)
 {
+    if (!TcpConnectedPort) return -1;
     unsigned int imagesize;
     cv::imencode(".jpg", Image, sendbuff, param);
     imagesize=htonl(sendbuff.size()); // convert image size to network format
@@ -31,13 +32,13 @@ int TcpSendImageAsJpeg(TTcpConnectedPort * TcpConnectedPort,cv::Mat Image)
 
 int TcpSendImageAsJpegProtocol(TTcpConnectedPort* TcpConnectedPort, cv::Mat Image)
 {
-	NetworkManager* networkManager = new NetworkManager();
+	// NetworkManager* networkManager = new NetworkManager();
     
-	cv::imencode(".jpg", Image, sendbuff, param);
+	// cv::imencode(".jpg", Image, sendbuff, param);
 	
-	networkManager->sendImageToClient(TcpConnectedPort, "lg", 1000, sendbuff.size(), (const char*)sendbuff.data());
+	// networkManager->sendImageToClient(TcpConnectedPort, "lg", 1000, sendbuff.size(), (const char*)sendbuff.data());
 
-	delete networkManager;
+	// delete networkManager;
 	/*
 	ProtoBuff* msgBuff = new ProtoBuff();
 	msgBuff->setMsgType(1);

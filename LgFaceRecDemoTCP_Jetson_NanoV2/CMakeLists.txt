@@ -8,7 +8,7 @@ set (CMAKE_CXX_STANDARD 11)
 INCLUDE(FindPkgConfig)
 find_package(OpenCV REQUIRED)
 find_package(CUDA)
-pkg_check_modules(pkgs REQUIRED glib-2.0 gobject-2.0 gio-2.0 gio-unix-2.0 sqlite3 libcrypto)
+pkg_check_modules(pkgs REQUIRED glib-2.0 gobject-2.0 gio-2.0 gio-unix-2.0 sqlite3 libcrypto wolfssl protobuf)
 FOREACH(flag ${pkgs_CFLAGS})
   SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
 ENDFOREACH(flag)
@@ -71,11 +71,15 @@ include_directories(
   trt_l2norm_helper
   ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
   ${TENSORRT_INCLUDE_DIR}
+  ../Common/Protocol
+  ../Common/Protocol/Msg
 )
 
 message("TENSORRT_LIBRARY = ${TENSORRT_LIBRARY}")
 
 AUX_SOURCE_DIRECTORY(./src DIR_SRCS)
+AUX_SOURCE_DIRECTORY(../Common/Protocol DIR_SRCS)
+AUX_SOURCE_DIRECTORY(../Common/Protocol/Msg DIR_SRCS)
 message("DIR_SRCS = ${DIR_SRCS}")
 cuda_add_executable(${PROJECT_NAME} ${DIR_SRCS})
 
@@ -84,4 +88,11 @@ target_link_libraries(${PROJECT_NAME}
   ${TENSORRT_LIBRARY}
   ${pkgs_LDFLAGS}
 )
-target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} wolfssl) 
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS}) 
+
+
+# ADD_CUSTOM_COMMAND (
+#         PRE_BUILD
+#         OUTPUT protocolLogin.pb.cc
+#         COMMAND protoc --cpp_out=./src/protocol/ ../Common/Protocol/Msg/protocolLogin.proto                              
+#         COMMENT "Codegen Protocol buffer"  )

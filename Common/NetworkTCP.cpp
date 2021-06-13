@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "NetworkTCP.h"
+#include "ProtocolManager.h"
+
 //-----------------------------------------------------------------
 // OpenTCPListenPort - Creates a Listen TCP port to accept
 // connection requests
@@ -310,6 +312,16 @@ TTcpConnectedPort *OpenTcpConnectionTLS(const char *remotehostname, const char *
 		return(NULL);
 	}
 
+	timeval tv;
+	tv.tv_sec  = 2;
+	tv.tv_usec = 0;
+	if (setsockopt(TcpConnectedPort->ConnectedFd, SOL_SOCKET, SO_RCVTIMEO,(char*)&tv, sizeof(timeval)) == -1)
+	{
+		CloseTcpConnectedPort(&TcpConnectedPort);
+		perror("setsockopt SO_RCVTIMEO failed");
+		return(NULL);
+	}	
+
 	if (connect(TcpConnectedPort->ConnectedFd,result->ai_addr,result->ai_addrlen) < 0) 
 	{
 		CloseTcpConnectedPortTLS(&TcpConnectedPort);
@@ -433,6 +445,16 @@ TTcpConnectedPort *OpenTcpConnection(const char *remotehostname, const char * re
 		return(NULL);
 	}
 
+	timeval tv;
+	tv.tv_sec  = 2;
+	tv.tv_usec = 0;
+	if (setsockopt(TcpConnectedPort->ConnectedFd, SOL_SOCKET, SO_RCVTIMEO,(char*)&tv, sizeof(timeval)) == -1)
+	{
+		CloseTcpConnectedPort(&TcpConnectedPort);
+		perror("setsockopt SO_RCVTIMEO failed");
+		return(NULL);
+	}	
+
 	if (connect(TcpConnectedPort->ConnectedFd,result->ai_addr,result->ai_addrlen) < 0) 
 	{
 		CloseTcpConnectedPort(&TcpConnectedPort);
@@ -459,11 +481,12 @@ void CloseTcpConnectedPortTLS(TTcpConnectedPort **TcpConnectedPort)
 		(*TcpConnectedPort)->ConnectedFd=BAD_SOCKET_FD;
 	}
 	
-	if((*TcpConnectedPort)->ssl)
+	if((*TcpConnectedPort)->ssl) {
 		wolfSSL_free((*TcpConnectedPort)->ssl);
-	if((*TcpConnectedPort)->ctx)
+	}
+	if((*TcpConnectedPort)->ctx) {
 		wolfSSL_CTX_free((*TcpConnectedPort)->ctx);
-
+	}
 	delete (*TcpConnectedPort);
 	(*TcpConnectedPort)=NULL;
 #if  defined(_WIN32) || defined(_WIN64)
@@ -490,9 +513,22 @@ void CloseTcpConnectedPort(TTcpConnectedPort **TcpConnectedPort)
 //-----------------------------------------------------------------
 // ReadDataTcp - Reads the specified amount TCP data 
 //-----------------------------------------------------------------
+
+void print_pkt_header(const unsigned char* buff,int size) {
+
+	for (int i=0; i<size; i++) {
+		printf("%d[%d][%c] ",i, buff[i], (buff[i]<32 ? ' ' : buff[i])  );		
+	}
+	printf("\n");
+
+}
+
+
 ssize_t ReadDataTcpTLS(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, size_t length)
 {
 	ssize_t bytes;
+	ssize_t my_packet_size=-1;
+	ssize_t accumulated=0;
 
 	for (size_t i = 0; i < length; i += bytes)
 	{
@@ -500,12 +536,39 @@ ssize_t ReadDataTcpTLS(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, 
 		{
 			return (-1);
 		}
+		accumulated+=bytes;
+		if (i==0) {
+			MyPacket *p=(MyPacket*)data;
+			printf("max packet length=%zu received=%zu packet_length=%d timestamp=%u msgtype=%d\n", 
+						length, bytes, p->hdr.size , p->hdr.timestamp, p->hdr.msgtype);
+			if (p->hdr.head[0]=='S' && p->hdr.head[1]=='B' && p->hdr.head[2]=='1' && p->hdr.head[3]=='T') {
+				my_packet_size=p->hdr.size;
+			}
+			// print_pkt_header(data,60);
+		}
+		if (my_packet_size==-1) {
+			MyPacket *p=(MyPacket*)(data+i);
+			if (p->hdr.head[0]=='S' && p->hdr.head[1]=='B' && p->hdr.head[2]=='1' && p->hdr.head[3]=='T') {
+				my_packet_size=p->hdr.size;
+				printf("Found Header\n");
+				memcpy(data,data+i,bytes);
+				i=0;
+				accumulated=bytes;
+			}
+		}
+		printf("accumulated packets=%zu   my_packet_size=%zd\n",accumulated, my_packet_size );
+		if (my_packet_size>0 && accumulated>=my_packet_size)
+			return accumulated;
 	}
 	return(length);
 }
+
+
 ssize_t ReadDataTcp(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, size_t length)
 {
 	ssize_t bytes;
+	ssize_t my_packet_size=-1;
+	ssize_t accumulated=0;
 
 	for (size_t i = 0; i < length; i += bytes)
 	{
@@ -513,6 +576,29 @@ ssize_t ReadDataTcp(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, siz
 		{
 			return (-1);
 		}
+		accumulated+=bytes;
+		if (i==0) {
+			MyPacket *p=(MyPacket*)data;
+			printf("max packet length=%zu received=%zu packet_length=%d timestamp=%u msgtype=%d\n", 
+						length, bytes, p->hdr.size , p->hdr.timestamp, p->hdr.msgtype);
+			if (p->hdr.head[0]=='S' && p->hdr.head[1]=='B' && p->hdr.head[2]=='1' && p->hdr.head[3]=='T') {
+				my_packet_size=p->hdr.size;
+			}
+			// print_pkt_header(data,60);
+		}
+		if (my_packet_size==-1) {
+			MyPacket *p=(MyPacket*)(data+i);
+			if (p->hdr.head[0]=='S' && p->hdr.head[1]=='B' && p->hdr.head[2]=='1' && p->hdr.head[3]=='T') {
+				my_packet_size=p->hdr.size;
+				printf("Found Header\n");
+				memcpy(data,data+i,bytes);
+				i=0;
+				accumulated=bytes;
+			}
+		}
+		printf("accumulated packets=%zu   my_packet_size=%zd\n",accumulated, my_packet_size );
+		if (my_packet_size>0 && accumulated>=my_packet_size)
+			return accumulated;
 	}
 	return(length);
 }

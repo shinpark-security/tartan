@@ -21,12 +21,12 @@ typedef struct
 class CImgProc
 {
 public:
-    CImgProc();
-    CImgProc(string dev);
+    CImgProc(GAsyncQueue *q);
+    CImgProc(GAsyncQueue *q, string dev);
     ~CImgProc();
     gboolean thread_run;
     GThread *thread;
-    gboolean start(GAsyncQueue *q);
+    gboolean start();
     gboolean stop();
     int kbhit();
     int getch();
