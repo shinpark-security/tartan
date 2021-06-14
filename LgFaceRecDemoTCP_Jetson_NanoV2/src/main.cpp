@@ -88,16 +88,10 @@ gboolean thread_start(tServiceData *psbd)
 	return ret;
 }
 
+
 gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 {
 	static SystemState prev_sstate=SS_READY;
-
-	
-	// printf("CONTROL MESSAGE RECEIVED: %10s\n", cmd);
-	// psbd->pcom->send_response((const unsigned char *)"response",5);
-	// psbd->pimgproc->add_new_user("dolmangi");
-	
- 
 
 	if (psbd->sstate != prev_sstate ) {
 		printf("\n-----------------------------------------------------------\n");
@@ -124,22 +118,16 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 			{
 				printf("OK You're a valid user : privilege=%d\n", priv);
 				psbd->privilege=(SessionPrivilege)priv;
-				CProtocolManager proto_man;
 				CAckProtocol ack(protocol_msg::Ack::ACK_OK, priv);
-				size_t leng = 0;
-				unsigned char *pkt = proto_man.make_packet(ack, &leng);
-				if (pcom) pcom->send_response(pkt,leng);
+				if (pcom) pcom->send_packet(ack);
 				psbd->sstate=SS_LOGIN_OK;
 			}
 			else
 			{
 				printf("Login fail.\n");
-				CProtocolManager proto_man;
 				CAckProtocol ack(protocol_msg::Ack::ACK_NOK, -1);
-				size_t leng = 0;
-				unsigned char *pkt = proto_man.make_packet(ack, &leng);
 				if (pcom) {
-					pcom->send_response(pkt,leng);
+					pcom->send_packet(ack);
 					sleep(1);
 					pcom->disconnect();
 				} 
@@ -191,14 +179,9 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 				for (auto f : files) 
 					filelist.push_back(f.fileName);
 
-				CProtocolManager proto_man;
 				CVideoFileListProtocol vlist(filelist);
-				size_t leng = 0;
-				unsigned char *pkt = proto_man.make_packet(vlist, &leng);
-				if (pcom) {
-					pcom->send_response(pkt,leng);
-				} 
-				psbd->sstate=SS_TESTRUN_START;
+				if (pcom) pcom->send_packet(vlist);
+				psbd->sstate=SS_TESTRUN;
 			}
 		}
 		break;
@@ -208,36 +191,6 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 		break;
 	case SS_LEARN_DONE:
 	break;
-	case SS_TESTRUN_START:
-		printf("SS_TESTRUN_START\n");
-		if (pbase && pbase->msg_type == MSG_VIDEO_PLAY)
-		{
-			CTestMode_PlayVideoProtocol *play=dynamic_cast<CTestMode_PlayVideoProtocol*>(pbase);
-			printf("Video file index=%d\n",play->msg.index());
-			if (play->msg.index()>=0 ) {
-				
-				CProtocolManager proto_man;
-				CAckProtocol ack(protocol_msg::Ack::ACK_OK, play->msg.index());
-				size_t leng = 0;
-				unsigned char *pkt = proto_man.make_packet(ack, &leng);
-				if (pcom) pcom->send_response(pkt,leng);
-				vector <string> filelist;
-				auto files=get_video_files("..");
-				psbd->pimgproc->video_file=files[play->msg.index()].absPath;
-				psbd->pimgproc->start(IMGPROC_MODE_TESTRUN);
-				psbd->pimgproc->set_enable_send(true);
-				psbd->sstate=SS_TESTRUN;
-			}
-			else {
-				CProtocolManager proto_man;
-				CAckProtocol ack(protocol_msg::Ack::ACK_NOK, play->msg.index());
-				size_t leng = 0;
-				unsigned char *pkt = proto_man.make_packet(ack, &leng);
-				if (pcom) pcom->send_response(pkt,leng);
-				psbd->sstate=SS_RUN;
-			}
-		}	
-		break;
 	case SS_TESTRUN:
 		printf("SS_TESTRUN\n");
 		if (pbase && pbase->msg_type == MSG_CONTROL_MODE)
@@ -269,15 +222,9 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 				auto files=get_video_files("..");
 				for (auto f : files) 
 					filelist.push_back(f.fileName);
-
-				CProtocolManager proto_man;
 				CVideoFileListProtocol vlist(filelist);
-				size_t leng = 0;
-				unsigned char *pkt = proto_man.make_packet(vlist, &leng);
-				if (pcom) {
-					pcom->send_response(pkt,leng);
-				} 
-				psbd->sstate=SS_TESTRUN_START;
+				if (pcom) pcom->send_packet(vlist);
+				psbd->sstate=SS_TESTRUN;
 			}
 		}
 		else if (pbase && pbase->msg_type == MSG_VIDEO_PLAY)
@@ -289,11 +236,9 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 				psbd->pimgproc->stop();
 				sleep(1);
 				
-				CProtocolManager proto_man;
 				CAckProtocol ack(protocol_msg::Ack::ACK_OK, play->msg.index());
-				size_t leng = 0;
-				unsigned char *pkt = proto_man.make_packet(ack, &leng);
-				if (pcom) pcom->send_response(pkt,leng);
+				if (pcom) pcom->send_packet(ack);
+
 				vector <string> filelist;
 				auto files=get_video_files("..");
 				psbd->pimgproc->video_file=files[play->msg.index()].absPath;

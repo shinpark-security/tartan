@@ -162,6 +162,17 @@ CComm::send_jpg(const cv::Mat frame)
     return ret;
 }
 
+gboolean 
+CComm::send_packet(CBaseProtocol &protocol)
+{
+	gboolean ret=false;
+	CProtocolManager proto_man;
+	size_t leng = 0;
+	unsigned char *pkt = proto_man.make_packet(protocol, &leng);
+    ret = send_response(pkt,leng);
+	return ret;
+}
+
 gboolean
 CComm::send_response(const unsigned char *buff, size_t len)
 {

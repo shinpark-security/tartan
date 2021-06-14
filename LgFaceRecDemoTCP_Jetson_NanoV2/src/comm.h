@@ -7,6 +7,7 @@
 #include "network.h"
 #include "NetworkTCP.h"
 #include "TcpSendRecvJpeg.h"
+#include "BaseProtocol.h"
 
 typedef TTcpListenPort *(*open_tcp_listen_port_func)(short localport);
 typedef void (*close_tcp_listen_port_func)(TTcpListenPort **TcpListenPort);
@@ -38,6 +39,7 @@ public:
     gboolean connection_wait(void);
     gboolean send_jpg(const cv::Mat frame);
     gboolean send_response(const unsigned char *buff, size_t len);
+    gboolean send_packet(CBaseProtocol &protocol);
 
     static gpointer comm_thread(gpointer data);
     gboolean send_msg_to_main_connected(gboolean connected);

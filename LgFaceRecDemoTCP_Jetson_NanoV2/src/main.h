@@ -19,7 +19,6 @@ enum SystemState {
     SS_LEARN_START,
     SS_LEARN,
     SS_LEARN_DONE,
-    SS_TESTRUN_START,
     SS_TESTRUN,
     SS_TESTRUN_DONE,
 };
