@@ -258,6 +258,8 @@ TTcpConnectedPort *OpenTcpConnectionTLS(const char *remotehostname, const char *
 		return(NULL);
 	}
 	TcpConnectedPort->ConnectedFd=BAD_SOCKET_FD;
+	TcpConnectedPort->ctx=NULL;
+	TcpConnectedPort->ssl=NULL;
 #if  defined(_WIN32) || defined(_WIN64)
 	WSADATA wsaData;
 	int     iResult;
@@ -290,9 +292,9 @@ TTcpConnectedPort *OpenTcpConnectionTLS(const char *remotehostname, const char *
 	}
 	if ((TcpConnectedPort->ConnectedFd= socket(AF_INET, SOCK_STREAM, 0)) == BAD_SOCKET_FD)
 	{
+		perror("socket failed");
 		CloseTcpConnectedPortTLS(&TcpConnectedPort);
 		freeaddrinfo(result);
-		perror("socket failed");
 		return(NULL);  
 	}
 
@@ -300,15 +302,15 @@ TTcpConnectedPort *OpenTcpConnectionTLS(const char *remotehostname, const char *
 	if (setsockopt(TcpConnectedPort->ConnectedFd, SOL_SOCKET,
 				SO_SNDBUF, (char *)&bufsize, sizeof(bufsize)) == -1)
 	{
-		CloseTcpConnectedPortTLS(&TcpConnectedPort);
 		perror("setsockopt SO_SNDBUF failed");
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
 		return(NULL);
 	}
 	if (setsockopt(TcpConnectedPort->ConnectedFd, SOL_SOCKET, 
 				SO_RCVBUF, (char *)&bufsize, sizeof(bufsize)) == -1)
 	{
-		CloseTcpConnectedPortTLS(&TcpConnectedPort);
 		perror("setsockopt SO_SNDBUF failed");
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
 		return(NULL);
 	}
 
@@ -317,16 +319,16 @@ TTcpConnectedPort *OpenTcpConnectionTLS(const char *remotehostname, const char *
 	tv.tv_usec = 0;
 	if (setsockopt(TcpConnectedPort->ConnectedFd, SOL_SOCKET, SO_RCVTIMEO,(char*)&tv, sizeof(timeval)) == -1)
 	{
-		CloseTcpConnectedPort(&TcpConnectedPort);
 		perror("setsockopt SO_RCVTIMEO failed");
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
 		return(NULL);
 	}	
 
 	if (connect(TcpConnectedPort->ConnectedFd,result->ai_addr,result->ai_addrlen) < 0) 
 	{
+		perror("connect failed");
 		CloseTcpConnectedPortTLS(&TcpConnectedPort);
 		freeaddrinfo(result);
-		perror("connect failed");
 		return(NULL);
 	}
 
@@ -346,7 +348,7 @@ TTcpConnectedPort *OpenTcpConnectionTLS(const char *remotehostname, const char *
 	if (wolfSSL_CTX_load_verify_locations(TcpConnectedPort->ctx, CHAIN_CERT_FILE, NULL)
 			!= WOLFSSL_SUCCESS) {
 		fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
-				CERT_FILE);
+				CHAIN_CERT_FILE);
 		CloseTcpConnectedPortTLS(&TcpConnectedPort);
 		return(NULL);
 	}
