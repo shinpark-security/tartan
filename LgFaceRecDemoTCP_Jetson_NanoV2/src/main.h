@@ -24,6 +24,13 @@ enum SystemState {
     SS_TESTRUN_DONE,
 };
 
+enum SessionPrivilege {
+    SP_NONE = -1,
+    SP_ADMIN = 0,
+    SP_USER1 = 1,
+    SP_USER2 = 2,
+};
+
 typedef struct {
     // list <CComm *> list_com;
     CComm *pcom;
@@ -34,6 +41,7 @@ typedef struct {
     GAsyncQueue *queue;
     GMainLoop *mainloop;
     SystemState sstate;
+    SessionPrivilege privilege;
     static gpointer service_main (gpointer data);
 } tServiceData;
 

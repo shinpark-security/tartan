@@ -70,6 +70,7 @@ CVideoFileListProtocol::CVideoFileListProtocol(vector<string> &videos)
 :CBaseProtocol(MSG_VIDEO_FILE_LIST, &msg)
 {
 	*msg.mutable_filelist() = { videos.begin(), videos.end() };	 
+	msg.set_nfiles(videos.size());
 }
 
 

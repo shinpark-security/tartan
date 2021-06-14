@@ -21,7 +21,7 @@
 #include "MyProtocol.h"
 
 /* prototypes */
-gboolean steate_machine(tServiceData *psbd);
+gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase);
 gboolean thread_start(tServiceData *psbd);
 gboolean thread_stop(tServiceData *psbd);
 static gboolean on_handle_sigterm(gpointer pUserData);
@@ -65,24 +65,122 @@ gboolean thread_start(tServiceData *psbd)
 	return ret;
 }
 
-gboolean steate_machine(tServiceData *psbd)
+gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 {
 	static SystemState prev_sstate=SS_READY;
+
+	
+	// printf("CONTROL MESSAGE RECEIVED: %10s\n", cmd);
+	// psbd->pcom->send_response((const unsigned char *)"response",5);
+	// psbd->pimgproc->add_new_user("dolmangi");
+	
+ 
+
 	if (psbd->sstate != prev_sstate ) {
 		printf("SYSTEM STATE: %d\n",psbd->sstate );
 	}
 	switch(psbd->sstate)
 	{
 	case SS_READY:
-	break;
+		psbd->sstate=SS_LOGIN;
+		psbd->privilege=SP_NONE;
+		psbd->pimgproc->set_enable_send(false);
+		break;
 	case SS_LOGIN:
-	break;
-	case SS_LOGIN_OK:
-	break;
+		if (pbase && pbase->msg_type == MSG_LOGIN)
+		{
+			CLoginProtocol *plogin=dynamic_cast<CLoginProtocol*>(pbase);
+			string account=plogin->msg.user_id();
+			string passwd=plogin->msg.password();
+			printf("ACCOUNT=%s PASSWORD=%s\n ", account.c_str(), passwd.c_str());
+			CAuth auth;
+			int priv = auth.login(account, passwd);
+			if (priv >= 0)
+			{
+				printf("OK You're a valid user : privilege=%d\n", priv);
+				psbd->privilege=(SessionPrivilege)priv;
+				CProtocolManager proto_man;
+				CAckProtocol ack(protocol_msg::Ack::ACK_OK, priv);
+				size_t leng = 0;
+				unsigned char *pkt = proto_man.make_packet(ack, &leng);
+				if (pcom) pcom->send_response(pkt,leng);
+				psbd->sstate=SS_LOGIN_OK;
+			}
+			else
+			{
+				printf("Login fail.\n");
+				CProtocolManager proto_man;
+				CAckProtocol ack(protocol_msg::Ack::ACK_NOK, 0);
+				size_t leng = 0;
+				unsigned char *pkt = proto_man.make_packet(ack, &leng);
+				if (pcom) {
+					pcom->send_response(pkt,leng);
+					sleep(1);
+					pcom->disconnect();
+				} 
+				psbd->sstate=SS_LOGIN_NOK;
+			}
+		}
+		else {
+			printf("wait for login....\n");
+			sleep(1);
+		}
+		break;
+	case SS_LOGIN_OK: 
+		printf("login ok\n");
+		psbd->pimgproc->set_enable_send(true);
+		psbd->sstate=SS_RUN;
+		break;
 	case SS_LOGIN_NOK:
-	break;
+		printf("login not ok\n");
+		psbd->sstate=SS_READY;
+		break;
 	case SS_RUN:
-	break;
+		if (pbase && pbase->msg_type == MSG_CONTROL_MODE)
+		{
+			CControlModeProtocol *ctl=dynamic_cast<CControlModeProtocol*>(pbase);
+
+			printf("Control MODE=%d\n ", ctl->msg.mode());
+
+			if (ctl->msg.mode() == protocol_msg::ControlMode::RUN) {
+				psbd->pimgproc->set_enable_send(false);
+				psbd->pimgproc->stop();
+				sleep(1);
+				psbd->pimgproc->start(IMGPROC_MODE_RUN);
+				psbd->pimgproc->set_enable_send(true);
+			}
+			else if (ctl->msg.mode() == protocol_msg::ControlMode::LEARNING) {
+				psbd->pimgproc->set_enable_send(false);
+				psbd->pimgproc->stop();
+				sleep(1);
+				psbd->pimgproc->video_file="../friends640x480.mp4";
+				psbd->pimgproc->start(IMGPROC_MODE_TESTRUN);
+				psbd->pimgproc->set_enable_send(true);
+			}
+			else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN) {
+				psbd->pimgproc->set_enable_send(false);
+				psbd->pimgproc->stop();
+				sleep(1);
+				psbd->pimgproc->start(IMGPROC_MODE_RUN);
+				psbd->pimgproc->set_enable_send(true);
+				vector <string> filelist;
+				filelist.push_back("박종현");
+				filelist.push_back("신연비");
+				filelist.push_back("김성수");
+				filelist.push_back("이재원");
+				filelist.push_back("이성진");
+				filelist.push_back("김서광");
+				CProtocolManager proto_man;
+				CVideoFileListProtocol vlist(filelist);
+				size_t leng = 0;
+				unsigned char *pkt = proto_man.make_packet(vlist, &leng);
+				if (pcom) {
+					pcom->send_response(pkt,leng);
+				} 
+
+			}
+		}
+		break;
 	case SS_LEARN_START:
 	break;
 	case SS_LEARN:
@@ -91,12 +189,29 @@ gboolean steate_machine(tServiceData *psbd)
 	break;
 	case SS_TESTRUN_START:
 	break;
-	break;
 	case SS_TESTRUN:
 	break;
 	case SS_TESTRUN_DONE:
 	break;
 	}
+
+	if (pbase) {	
+		if (pbase->msg_type == MSG_SERVER_SETTING)
+		{
+			CServerSettingProtocol *ctl=dynamic_cast<CServerSettingProtocol*>(pbase);
+
+			printf("Server Setting MODE=%d\n ", ctl->msg.mode());
+
+			if (ctl->msg.mode() == protocol_msg::ServerSetting::CAM_STOP) {
+				psbd->pimgproc->set_enable_send(false);
+			}
+			else if (ctl->msg.mode() == protocol_msg::ServerSetting::CAM_START) {
+				psbd->pimgproc->set_enable_send(true);
+			}
+		}
+
+	}
+
 	prev_sstate=psbd->sstate;
 	return true;
 }
@@ -114,6 +229,9 @@ gpointer main_thread(gpointer data)
 
 	while (psbd->thread_run)
 	{
+		CComm *pcom = nullptr;
+		CBaseProtocol *pbase=nullptr;
+
 		MyMsg *pmsg = (MyMsg *)g_async_queue_timeout_pop(psbd->queue, 1000000U);
 		if (pmsg == GINT_TO_POINTER(-1))
 		{
@@ -136,74 +254,8 @@ gpointer main_thread(gpointer data)
 			break;
 			case MYMSG_FROM_CLIENT:
 			{
-				// printf("MSG:%d\n",pmsg->msgid);
-				// char *cmd = (char *)pmsg->pdata;
-				CComm *pcom = (CComm *)pmsg->pobj;
-				CBaseProtocol *pbase=(CBaseProtocol *)pmsg->pdata;
-				// printf("CONTROL MESSAGE RECEIVED: %10s\n", cmd);
-				// psbd->pcom->send_response((const unsigned char *)"response",5);
-				// psbd->pimgproc->add_new_user("dolmangi");
-				printf("MYMSG_FROM_CLIENT msg_type=%d\n", pbase->msg_type);
-				if (pbase->msg_type == MSG_LOGIN)
-				{
-					CLoginProtocol *plogin=dynamic_cast<CLoginProtocol*>(pbase);
-					string account=plogin->msg.user_id();
-					string passwd=plogin->msg.password();
-					printf("ACCOUNT=%s PASSWORD=%s\n ", account.c_str(), passwd.c_str());
-					CAuth auth;
-					int priv = auth.login(account, passwd);
-					if (priv == 0)
-					{
-						printf("OK You're an administrator\n");
-						psbd->pimgproc->set_enable_send(true);
-					}
-					else if (priv > 0)
-					{
-						printf("OK You're a normal user\n");
-						psbd->pimgproc->set_enable_send(true);
-					}
-					else
-					{
-						printf("Login fail.\n");
-						psbd->pimgproc->set_enable_send(false);
-						if (pcom)
-							pcom->disconnect();
-					}
-				}
-				else if (pbase->msg_type == MSG_SERVER_SETTING)
-				{
-					CServerSettingProtocol *ctl=dynamic_cast<CServerSettingProtocol*>(pbase);
-
-					printf("Server Setting MODE=%d\n ", ctl->msg.mode());
-
-					if (ctl->msg.mode() == protocol_msg::ServerSetting::CAM_STOP) {
-						psbd->pimgproc->set_enable_send(false);
-					}
-					else if (ctl->msg.mode() == protocol_msg::ServerSetting::CAM_START) {
-						psbd->pimgproc->set_enable_send(true);
-					}
-				}
-				else if (pbase->msg_type == MSG_CONTROL_MODE)
-				{
-					CControlModeProtocol *ctl=dynamic_cast<CControlModeProtocol*>(pbase);
-
-					printf("Control MODE=%d\n ", ctl->msg.mode());
-
-					if (ctl->msg.mode() == protocol_msg::ControlMode::RUN) {
-						psbd->pimgproc->set_enable_send(false);
-						psbd->pimgproc->stop();
-					}
-					else if (ctl->msg.mode() == protocol_msg::ControlMode::LEARNING) {
-						psbd->pimgproc->video_file="../friends640x480.mp4";
-						psbd->pimgproc->start(IMGPROC_MODE_TESTRUN);
-						psbd->pimgproc->set_enable_send(true);
-					}
-					else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN) {
-						psbd->pimgproc->start(IMGPROC_MODE_RUN);
-						psbd->pimgproc->set_enable_send(true);
-					}
-				}
-				delete pbase;
+				pcom = (CComm *)pmsg->pobj;
+				pbase=(CBaseProtocol *)pmsg->pdata;
 			}
 			break;
 			case MYMSG_NET_CONNECTED:
@@ -226,9 +278,12 @@ gpointer main_thread(gpointer data)
 			}
 			break;
 			}
-			delete pmsg;
 		}
-		steate_machine(psbd);
+		steate_machine(psbd, pcom, pbase);
+		if (pbase) delete pbase;
+		if (pmsg) delete pmsg;
+
+
 		// printf("main thread...\n");
 #if 1 //temp for test
 		// psbd->pimgproc->set_enable_send(true);

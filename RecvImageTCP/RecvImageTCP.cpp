@@ -204,6 +204,22 @@ bool get_a_packet(TTcpConnectedPort *TcpConnectedPort, unsigned char *buff, Mat 
                     if (!(*pImage).empty()) imshow("Server", *pImage); // If a valid image is received then display it
                 }
                 break;
+                case MSG_ACK:
+                {
+                    printf("MsgReq::MSG_ACK\n");
+                    CAckProtocol *ack=dynamic_cast<CAckProtocol*>(pbase);
+                    printf("ACK type=%d  arg=%d\n", ack->msg.acktype(), ack->msg.arg() );
+
+                }
+                break;
+                case MSG_VIDEO_FILE_LIST:
+                {
+                    printf("MsgReq::MSG_VIDEO_FILE_LIST\n");
+                    CVideoFileListProtocol *flist=dynamic_cast<CVideoFileListProtocol*>(pbase);
+                    for (auto f : flist->msg.filelist())
+                      printf("file : %s\n", f.c_str());
+                }
+                break;
             }
         } else {
             printf("parsing error..\n");
