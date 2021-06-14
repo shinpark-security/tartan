@@ -119,34 +119,9 @@ TTcpConnectedPort *AcceptTcpConnectionTLS(TTcpListenPort *TcpListenPort,
 		return(NULL);
 	}
 	
-	TcpConnectedPort->ConnectedFd= accept(TcpListenPort->ListenFd,
-			(struct sockaddr *) cli_addr,clilen);
-
-	if (TcpConnectedPort->ConnectedFd== BAD_SOCKET_FD) 
-	{
-		perror("ERROR on accept");
-		delete TcpConnectedPort;
-		return NULL;
-	}
-
-	int bufsize = 200 * 1024;
-	if (setsockopt(TcpConnectedPort->ConnectedFd, SOL_SOCKET, 
-				SO_RCVBUF, (char *)&bufsize, sizeof(bufsize)) == -1)
-	{
-		CloseTcpConnectedPortTLS(&TcpConnectedPort);
-		perror("setsockopt SO_SNDBUF failed");
-		return(NULL);
-	}
-	if (setsockopt(TcpConnectedPort->ConnectedFd, SOL_SOCKET, 
-				SO_SNDBUF, (char *)&bufsize, sizeof(bufsize)) == -1)
-	{
-		CloseTcpConnectedPortTLS(&TcpConnectedPort);
-		perror("setsockopt SO_SNDBUF failed");
-		return(NULL);
-	}
-
 	/* declare wolfSSL objects */
 	TcpConnectedPort->ctx = NULL;
+	TcpConnectedPort->ssl = NULL;
 	
 	/* Create and initialize WOLFSSL_CTX */
 	if ((TcpConnectedPort->ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method())) == NULL) {
@@ -172,7 +147,32 @@ TTcpConnectedPort *AcceptTcpConnectionTLS(TTcpListenPort *TcpListenPort,
 		CloseTcpConnectedPortTLS(&TcpConnectedPort);
 		return(NULL);
 	}
+	
+	TcpConnectedPort->ConnectedFd= accept(TcpListenPort->ListenFd,
+			(struct sockaddr *) cli_addr,clilen);
 
+	if (TcpConnectedPort->ConnectedFd== BAD_SOCKET_FD) 
+	{
+		perror("ERROR on accept");
+		delete TcpConnectedPort;
+		return NULL;
+	}
+
+	int bufsize = 200 * 1024;
+	if (setsockopt(TcpConnectedPort->ConnectedFd, SOL_SOCKET, 
+				SO_RCVBUF, (char *)&bufsize, sizeof(bufsize)) == -1)
+	{
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		perror("setsockopt SO_SNDBUF failed");
+		return(NULL);
+	}
+	if (setsockopt(TcpConnectedPort->ConnectedFd, SOL_SOCKET, 
+				SO_SNDBUF, (char *)&bufsize, sizeof(bufsize)) == -1)
+	{
+		CloseTcpConnectedPortTLS(&TcpConnectedPort);
+		perror("setsockopt SO_SNDBUF failed");
+		return(NULL);
+	}
 
 	/* Create a WOLFSSL object */
 	if ((TcpConnectedPort->ssl = wolfSSL_new(TcpConnectedPort->ctx)) == NULL) {
@@ -476,18 +476,18 @@ TTcpConnectedPort *OpenTcpConnection(const char *remotehostname, const char * re
 void CloseTcpConnectedPortTLS(TTcpConnectedPort **TcpConnectedPort)
 {
 	if ((*TcpConnectedPort)==NULL) return;
-
-	if ((*TcpConnectedPort)->ConnectedFd!=BAD_SOCKET_FD)  
-	{
-		CLOSE_SOCKET((*TcpConnectedPort)->ConnectedFd);
-		(*TcpConnectedPort)->ConnectedFd=BAD_SOCKET_FD;
-	}
 	
 	if((*TcpConnectedPort)->ssl) {
 		wolfSSL_free((*TcpConnectedPort)->ssl);
 	}
 	if((*TcpConnectedPort)->ctx) {
 		wolfSSL_CTX_free((*TcpConnectedPort)->ctx);
+	}
+
+	if ((*TcpConnectedPort)->ConnectedFd!=BAD_SOCKET_FD)  
+	{
+		CLOSE_SOCKET((*TcpConnectedPort)->ConnectedFd);
+		(*TcpConnectedPort)->ConnectedFd=BAD_SOCKET_FD;
 	}
 	delete (*TcpConnectedPort);
 	(*TcpConnectedPort)=NULL;
@@ -534,7 +534,7 @@ ssize_t ReadDataTcpTLS(TTcpConnectedPort *TcpConnectedPort,unsigned char *data, 
 
 	for (size_t i = 0; i < length; i += bytes)
 	{
-		if ((bytes = wolfSSL_recv(TcpConnectedPort->ssl, (char *)(data+i), length  - i,0)) == -1) 
+		if ((bytes = wolfSSL_recv(TcpConnectedPort->ssl, (char *)(data+i), length  - i,0)) <= 0) 
 		{
 			return (-1);
 		}

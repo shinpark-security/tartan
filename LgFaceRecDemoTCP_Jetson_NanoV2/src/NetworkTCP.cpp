@@ -258,6 +258,8 @@ TTcpConnectedPort *OpenTcpConnectionTLS(const char *remotehostname, const char *
 		return(NULL);
 	}
 	TcpConnectedPort->ConnectedFd=BAD_SOCKET_FD;
+	TcpConnectedPort->ctx=NULL;
+	TcpConnectedPort->ssl=NULL;
 #if  defined(_WIN32) || defined(_WIN64)
 	WSADATA wsaData;
 	int     iResult;
@@ -346,7 +348,7 @@ TTcpConnectedPort *OpenTcpConnectionTLS(const char *remotehostname, const char *
 	if (wolfSSL_CTX_load_verify_locations(TcpConnectedPort->ctx, CHAIN_CERT_FILE, NULL)
 			!= WOLFSSL_SUCCESS) {
 		fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
-				CERT_FILE);
+				CHAIN_CERT_FILE);
 		CloseTcpConnectedPortTLS(&TcpConnectedPort);
 		return(NULL);
 	}
