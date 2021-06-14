@@ -20,11 +20,15 @@
 #include "BaseProtocol.h"
 #include "MyProtocol.h"
 
+/* prototypes */
+gboolean steate_machine(tServiceData *psbd);
 gboolean thread_start(tServiceData *psbd);
 gboolean thread_stop(tServiceData *psbd);
 static gboolean on_handle_sigterm(gpointer pUserData);
 static gpointer main_thread(gpointer data);
 
+
+/* implementation */
 static gboolean on_handle_sigterm(gpointer pUserData)
 {
 	tServiceData *psbd = (tServiceData *)pUserData;
@@ -61,7 +65,41 @@ gboolean thread_start(tServiceData *psbd)
 	return ret;
 }
 
-
+gboolean steate_machine(tServiceData *psbd)
+{
+	static SystemState prev_sstate=SS_READY;
+	if (psbd->sstate != prev_sstate ) {
+		printf("SYSTEM STATE: %d\n",psbd->sstate );
+	}
+	switch(psbd->sstate)
+	{
+	case SS_READY:
+	break;
+	case SS_LOGIN:
+	break;
+	case SS_LOGIN_OK:
+	break;
+	case SS_LOGIN_NOK:
+	break;
+	case SS_RUN:
+	break;
+	case SS_LEARN_START:
+	break;
+	case SS_LEARN:
+	break;
+	case SS_LEARN_DONE:
+	break;
+	case SS_TESTRUN_START:
+	break;
+	break;
+	case SS_TESTRUN:
+	break;
+	case SS_TESTRUN_DONE:
+	break;
+	}
+	prev_sstate=psbd->sstate;
+	return true;
+}
 
 
 gpointer main_thread(gpointer data)
@@ -153,12 +191,16 @@ gpointer main_thread(gpointer data)
 
 					if (ctl->msg.mode() == protocol_msg::ControlMode::RUN) {
 						psbd->pimgproc->set_enable_send(false);
+						psbd->pimgproc->stop();
 					}
 					else if (ctl->msg.mode() == protocol_msg::ControlMode::LEARNING) {
-						psbd->pimgproc->set_enable_send(false);
+						psbd->pimgproc->video_file="../friends640x480.mp4";
+						psbd->pimgproc->start(IMGPROC_MODE_TESTRUN);
+						psbd->pimgproc->set_enable_send(true);
 					}
 					else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN) {
-						psbd->pimgproc->set_enable_send(false);
+						psbd->pimgproc->start(IMGPROC_MODE_RUN);
+						psbd->pimgproc->set_enable_send(true);
 					}
 				}
 				delete pbase;
@@ -186,6 +228,7 @@ gpointer main_thread(gpointer data)
 			}
 			delete pmsg;
 		}
+		steate_machine(psbd);
 		// printf("main thread...\n");
 #if 1 //temp for test
 		// psbd->pimgproc->set_enable_send(true);
@@ -268,6 +311,7 @@ int main(int argc, char *argv[])
 	// // printf("RET=%d\n", ret);
 	// // // auth.get_passwd_enc("lg1234");
 	tServiceData sbd;
+	sbd.sstate=SS_READY;
 	sbd.queue = g_async_queue_new();
 	sbd.pcom = new CComm(false, TCP_PORT_NON_SECURE, sbd.queue);
 	sbd.pcom_tls = new CComm(true, TCP_PORT_SECURE, sbd.queue);

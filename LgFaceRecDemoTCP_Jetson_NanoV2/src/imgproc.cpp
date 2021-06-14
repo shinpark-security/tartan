@@ -21,30 +21,68 @@
 #include "imgproc.h"
 #include "mydb.h"
 
+
+
+struct facenet_data {
+    FaceNetClassifier *faceNet;
+    mtcnn *mtCNN;
+    int maxFacesPerScene;
+    int nbFrames;
+    std::vector<struct Bbox> outputBbox;
+    VideoStreamer *fileStreamer;
+    VideoStreamer *cameraStreamer;
+};
+
+
 CImgProc::CImgProc(GAsyncQueue *q)
 {
     main_queue = q;
-    thread_run = true;
+    facenet_data *pfd=new facenet_data;
+    pfd->fileStreamer=nullptr;
+    pfd->cameraStreamer=nullptr;
+    pfacenet_data=pfd;
+    run_mode=IMGPROC_MODE_RUN;
+    thread_run = false;
     camera_dev = "";
     imgproc_queue = g_async_queue_new();
+    init_facenet();
 }
 
 CImgProc::CImgProc(GAsyncQueue *q,string dev)
 {
     main_queue = q;
-    thread_run = true;
+    facenet_data *pfd=new facenet_data;
+    pfd->fileStreamer=nullptr;
+    pfd->cameraStreamer=nullptr;
+    pfacenet_data=pfd;
+    run_mode=IMGPROC_MODE_RUN;
+    thread_run = false;
     camera_dev = dev;
     imgproc_queue = g_async_queue_new();
+    init_facenet();
 }
 
 CImgProc::~CImgProc()
 {
     g_async_queue_unref(imgproc_queue);
+    deinit_facenet();
+    if (pfacenet_data) delete (facenet_data*)pfacenet_data;
 }
 
 gboolean
-CImgProc::start()
+CImgProc::start(eImgProc_Runmode mode/*=IMGPROC_MODE_RUN*/)
 {
+    if (thread_run) return false;
+
+    facenet_data *pfd=(facenet_data*)pfacenet_data;
+
+    run_mode=mode;
+    thread_run=true;
+    while(g_async_queue_length (imgproc_queue)>0) {
+        ImgProcMsg *pmsg = (ImgProcMsg *)g_async_queue_timeout_pop(imgproc_queue, 1U);
+        if (pmsg != GINT_TO_POINTER(-1) && pmsg) delete pmsg;
+    }
+
     thread = g_thread_new("imgproc_thread", imgproc_thread, this);
     if (thread != nullptr)
     {
@@ -56,7 +94,10 @@ CImgProc::start()
 gboolean
 CImgProc::set_enable_send(gboolean enable)
 {
-    enable_send = enable;
+    printf("set_enable_send()+ Video Stream:%s\n", enable ? "Enable" : "Disable");
+    ImgProcMsg *pmsg = new ImgProcMsg;
+    pmsg->msgid = enable ? IMGPROC_ENABLE : IMGPROC_DISABLE ;
+    g_async_queue_push(imgproc_queue, pmsg);
     return true;
 }
 
@@ -65,14 +106,17 @@ CImgProc::stop()
 {
     if (!thread_run)
         return true;
+    printf("CImgProc::stop()+\n");
     g_async_queue_push(imgproc_queue, ((gpointer)(glong *)(glong)(-1)));
     thread_run = false;
 
     (void)g_thread_join(thread);
+    printf("CImgProc::stop()-\n");
     return true;
 }
 
-int CImgProc::kbhit()
+int 
+CImgProc::kbhit()
 {
     struct timeval tv = {0L, 0L};
     fd_set fds;
@@ -81,7 +125,8 @@ int CImgProc::kbhit()
     return select(1, &fds, NULL, NULL, &tv);
 }
 
-int CImgProc::getch()
+int 
+CImgProc::getch()
 {
     int r;
     unsigned char c;
@@ -111,17 +156,17 @@ CImgProc::add_new_user(const string name)
 using namespace nvinfer1;
 using namespace nvuffparser;
 
-gpointer
-CImgProc::imgproc_thread(gpointer data)
-{
-    CImgProc *pthis = (CImgProc *)data;
-    bool UseCamera = false;
 
-    Logger gLogger = Logger();
+gboolean 
+CImgProc::init_facenet()
+{
+//------------
+    facenet_data *pfd=(facenet_data*)pfacenet_data;
+    gLogger = Logger();
     // Register default TRT plugins (e.g. LRelu_TRT)
     if (!initLibNvInferPlugins(&gLogger, ""))
     {
-        return nullptr;
+        return false;
     }
 
     // USER DEFINED VALUES
@@ -131,43 +176,23 @@ CImgProc::imgproc_thread(gpointer data)
     //DataType dtype = DataType::kFLOAT;
     bool serializeEngine = true;
     int batchSize = 1;
-    int nbFrames = 0;
+    pfd->nbFrames = 0;
     // int videoFrameWidth =1280;
     // int videoFrameHeight =720;
-    int videoFrameWidth = 640;
-    int videoFrameHeight = 480;
+    videoFrameWidth = 640;
+    videoFrameHeight = 480;
 
-    int maxFacesPerScene = 8;
+    pfd->maxFacesPerScene = 8;
     float knownPersonThreshold = 1.;
-    bool isCSICam = true;
 
     // init facenet
-    FaceNetClassifier faceNet = FaceNetClassifier(gLogger, dtype, uffFile, engineFile, batchSize, serializeEngine,
-                                                  knownPersonThreshold, maxFacesPerScene, videoFrameWidth, videoFrameHeight);
-
-    VideoStreamer *videoStreamer;
-
-    // init opencv stuff
-    if (pthis->camera_dev == "") {
-        videoStreamer = new VideoStreamer(0, videoFrameWidth, videoFrameHeight, 60, isCSICam);
-        UseCamera = true;
-    }
-    else
-    {
-        printf("Using Camera Device : %s\n", pthis->camera_dev.c_str());
-        videoStreamer = new VideoStreamer(pthis->camera_dev, videoFrameWidth, videoFrameHeight);
-        if (pthis->camera_dev.substr(4)=="/dev") 
-            UseCamera = true;
-    }
-
-    cv::Mat frame;
-
+    pfd->faceNet = new FaceNetClassifier(gLogger, dtype, uffFile, engineFile, batchSize, serializeEngine,
+                                                  knownPersonThreshold, pfd->maxFacesPerScene, videoFrameWidth, videoFrameHeight);
     // init mtCNN
-    mtcnn mtCNN(videoFrameHeight, videoFrameWidth);
+    pfd->mtCNN= new mtcnn(videoFrameHeight, videoFrameWidth);
 
-    //init Bbox and allocate memory for "maxFacesPerScene" faces per scene
-    std::vector<struct Bbox> outputBbox;
-    outputBbox.reserve(maxFacesPerScene);
+    
+    pfd->outputBbox.reserve(pfd->maxFacesPerScene);
 
     // get embeddings of known faces
 #if 0
@@ -177,11 +202,11 @@ CImgProc::imgproc_thread(gpointer data)
     for (int i = 0; i < paths.size(); i++)
     {
         loadInputImage(paths[i].absPath, image, videoFrameWidth, videoFrameHeight);
-        outputBbox = mtCNN.findFace(image);
+        pfd->outputBbox = pfd->mtCNN->findFace(image);
         std::size_t index = paths[i].fileName.find_last_of(".");
         std::string rawName = paths[i].fileName.substr(0, index);
-        faceNet.forwardAddFace(image, outputBbox, rawName);
-        faceNet.resetVariables();
+        pfd->faceNet.forwardAddFace(image, pfd->outputBbox, rawName);
+        pfd->faceNet.resetVariables();
     }
 #else
     vector<tFaceEntity> facelist;
@@ -191,16 +216,67 @@ CImgProc::imgproc_thread(gpointer data)
         for (int i=0;i<facelist.size();i++) {
             image.data = facelist[i].data;
             printf("DB Name:%s\n", facelist[i].name.c_str());
-            outputBbox = mtCNN.findFace(image);
-            faceNet.forwardAddFace(image, outputBbox, facelist[i].name);
-            faceNet.resetVariables();
+            pfd->outputBbox = pfd->mtCNN->findFace(image);
+            pfd->faceNet->forwardAddFace(image, pfd->outputBbox, facelist[i].name);
+            pfd->faceNet->resetVariables();
             delete facelist[i].data;
             facelist[i].data=nullptr;
         }
     }
+    pfd->outputBbox.clear();
 
-#endif    
-    outputBbox.clear();
+#endif        
+    return true;
+}
+
+gboolean 
+CImgProc::deinit_facenet()
+{
+    facenet_data *pfd=(facenet_data*)pfacenet_data;
+    if (!pfd) return false;
+    if (pfd->mtCNN) delete pfd->mtCNN;
+    if (pfd->faceNet) delete pfd->faceNet;
+    return true;
+}
+
+gpointer
+CImgProc::imgproc_thread(gpointer data)
+{
+    CImgProc *pthis = (CImgProc *)data;
+    facenet_data *pfd=(facenet_data*)pthis->pfacenet_data;
+    eImgProc_Runmode running_mode=pthis->run_mode;
+
+    printf("Video Thread running mode=%d\n", running_mode);
+    VideoStreamer *videoStreamer;
+    if (running_mode!=IMGPROC_MODE_TESTRUN) 
+    {
+        if (pfd->cameraStreamer==nullptr) 
+        {
+            if (pthis->camera_dev == "") 
+            {
+                bool isCSICam = true;
+                pfd->cameraStreamer = new VideoStreamer(0, pthis->videoFrameWidth, pthis->videoFrameHeight, 60, isCSICam);
+            }
+            else
+            {
+                printf("Using USB Camera Device : %s\n", pthis->camera_dev.c_str());
+                pfd->cameraStreamer = new VideoStreamer(pthis->camera_dev, pthis->videoFrameWidth, pthis->videoFrameHeight);
+            }
+        }
+        videoStreamer=pfd->cameraStreamer;
+    }
+    else 
+    {
+        printf("Using Video File : %s\n", pthis->video_file.c_str());
+        videoStreamer = new VideoStreamer(pthis->video_file, pthis->videoFrameWidth, pthis->videoFrameHeight);
+    }
+
+
+    // init opencv stuff
+
+    cv::Mat frame;
+
+    //init Bbox and allocate memory for "maxFacesPerScene" faces per scene
 
     //  if  ((TcpListenPort=OpenTcpListenPort(pthis->tcp_port))==NULL)  // Open TCP Network port
     //    {
@@ -226,7 +302,6 @@ CImgProc::imgproc_thread(gpointer data)
 
     while (pthis->thread_run)
     {
-
         videoStreamer->getFrame(frame);
         if (frame.empty())
         {
@@ -239,7 +314,7 @@ CImgProc::imgproc_thread(gpointer data)
         dst_img.create(frame.size(), frame.type());
 
         // Push the images into the GPU
-        if (UseCamera)
+        if (running_mode!=IMGPROC_MODE_TESTRUN)
         {
             src_gpu.upload(frame);
             cv::cuda::rotate(src_gpu, dst_gpu, src_gpu.size(), 180, src_gpu.size().width, src_gpu.size().height);
@@ -247,15 +322,15 @@ CImgProc::imgproc_thread(gpointer data)
         }
 
         auto startMTCNN = chrono::steady_clock::now();
-        outputBbox = mtCNN.findFace(frame);
+        pfd->outputBbox = pfd->mtCNN->findFace(frame);
         auto endMTCNN = chrono::steady_clock::now();
         auto startForward = chrono::steady_clock::now();
-        faceNet.forward(frame, outputBbox);
+        pfd->faceNet->forward(frame, pfd->outputBbox);
         auto endForward = chrono::steady_clock::now();
         auto startFeatM = chrono::steady_clock::now();
-        faceNet.featureMatching(frame);
+        pfd->faceNet->featureMatching(frame);
         auto endFeatM = chrono::steady_clock::now();
-        faceNet.resetVariables();
+        pfd->faceNet->resetVariables();
 
         // if (TcpSendImageAsJpeg(TcpConnectedPort,frame)<0)  break;
 
@@ -269,8 +344,8 @@ CImgProc::imgproc_thread(gpointer data)
         }
 
         //cv::imshow("VideoSource", frame);
-        nbFrames++;
-        outputBbox.clear();
+        pfd->nbFrames++;
+        pfd->outputBbox.clear();
         frame.release();
 
         ImgProcMsg *pmsg = (ImgProcMsg *)g_async_queue_timeout_pop(pthis->imgproc_queue, 10U);
@@ -283,6 +358,12 @@ CImgProc::imgproc_thread(gpointer data)
         {
             switch (pmsg->msgid)
             {
+            case IMGPROC_ENABLE:
+                pthis->enable_send = true;
+                break;
+            case IMGPROC_DISABLE:
+                pthis->enable_send = false;
+                break;
             case IMGPROC_ADDNEW:
             {
                 printf("MSG:%d  ADDNEW name=%s\n", pmsg->msgid, pmsg->name.c_str());
@@ -297,12 +378,12 @@ CImgProc::imgproc_thread(gpointer data)
                 cv::cuda::rotate(src_gpu, dst_gpu, src_gpu.size(), 180, src_gpu.size().width, src_gpu.size().height);
                 dst_gpu.download(frame);
 
-                outputBbox = mtCNN.findFace(frame);
+                pfd->outputBbox = pfd->mtCNN->findFace(frame);
 
                 // if (TcpSendImageAsJpeg(TcpConnectedPort,frame)<0)  break;
 
                 //cv::imshow("VideoSource", frame);
-                faceNet.addNewFace(frame, outputBbox, pmsg->name);
+                pfd->faceNet->addNewFace(frame, pfd->outputBbox, pmsg->name);
                 auto dTimeEnd = chrono::steady_clock::now();
                 globalTimeStart += (dTimeEnd - dTimeStart);
             }
@@ -320,13 +401,17 @@ CImgProc::imgproc_thread(gpointer data)
 
     auto globalTimeEnd = chrono::steady_clock::now();
 
-    videoStreamer->release();
+    if (running_mode==IMGPROC_MODE_TESTRUN)  {
+        videoStreamer->release();
+        sleep(0.5);
+        videoStreamer=nullptr;
+    }
 
     auto milliseconds = chrono::duration_cast<chrono::milliseconds>(globalTimeEnd - globalTimeStart).count();
     double seconds = double(milliseconds) / 1000.;
-    double fps = nbFrames / seconds;
+    double fps = pfd->nbFrames / seconds;
 
-    std::cout << "Counted " << nbFrames << " frames in " << double(milliseconds) / 1000. << " seconds!"
+    std::cout << "Counted " << pfd->nbFrames << " frames in " << double(milliseconds) / 1000. << " seconds!"
               << " This equals " << fps << "fps.\n";
 
     return nullptr;

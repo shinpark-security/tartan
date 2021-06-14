@@ -10,7 +10,16 @@ typedef enum
 {
     IMGPROC_NONE = 0,
     IMGPROC_ADDNEW = 1,
+    IMGPROC_ENABLE = 2,
+    IMGPROC_DISABLE = 3,
 } _e_IMGPROC_MSG_ID;
+
+enum eImgProc_Runmode {
+    IMGPROC_MODE_NONE=0,
+    IMGPROC_MODE_RUN,
+    IMGPROC_MODE_LEARNING,
+    IMGPROC_MODE_TESTRUN,
+};
 
 typedef struct
 {
@@ -26,7 +35,7 @@ public:
     ~CImgProc();
     gboolean thread_run;
     GThread *thread;
-    gboolean start();
+    gboolean start(eImgProc_Runmode mode=IMGPROC_MODE_RUN);
     gboolean stop();
     int kbhit();
     int getch();
@@ -34,11 +43,20 @@ public:
     gboolean add_new_user(const string name);
     static gpointer imgproc_thread(gpointer data);
     string camera_dev;
+    gboolean init_facenet();
+    gboolean deinit_facenet();
+    Logger gLogger;
+    gpointer pfacenet_data;
+    eImgProc_Runmode run_mode;
+    string video_file;
 
 private:
     gboolean enable_send;
     GAsyncQueue *main_queue;
     GAsyncQueue *imgproc_queue;
+    int videoFrameWidth;
+    int videoFrameHeight;
+
 };
 
 #endif /*IMGPROC_H_*/
