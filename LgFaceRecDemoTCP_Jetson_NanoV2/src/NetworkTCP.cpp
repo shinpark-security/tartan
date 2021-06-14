@@ -620,7 +620,7 @@ ssize_t WriteDataTcpTLS(TTcpConnectedPort *TcpConnectedPort,unsigned char *data,
 		bytes_written = wolfSSL_send(TcpConnectedPort->ssl,
 				(char *)(data+total_bytes_written),
 				length - total_bytes_written,0);
-		if (bytes_written == -1)
+		if (bytes_written <= 0)
 		{
 			return(-1);
 		}
