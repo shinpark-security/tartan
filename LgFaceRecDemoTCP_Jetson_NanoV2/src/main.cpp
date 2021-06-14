@@ -110,7 +110,7 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 			{
 				printf("Login fail.\n");
 				CProtocolManager proto_man;
-				CAckProtocol ack(protocol_msg::Ack::ACK_NOK, 0);
+				CAckProtocol ack(protocol_msg::Ack::ACK_NOK, -1);
 				size_t leng = 0;
 				unsigned char *pkt = proto_man.make_packet(ack, &leng);
 				if (pcom) {
@@ -128,7 +128,6 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 		break;
 	case SS_LOGIN_OK: 
 		printf("login ok\n");
-		psbd->pimgproc->set_enable_send(true);
 		psbd->sstate=SS_RUN;
 		break;
 	case SS_LOGIN_NOK:
@@ -160,9 +159,6 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 			else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN) {
 				psbd->pimgproc->set_enable_send(false);
 				psbd->pimgproc->stop();
-				sleep(1);
-				psbd->pimgproc->start(IMGPROC_MODE_RUN);
-				psbd->pimgproc->set_enable_send(true);
 				vector <string> filelist;
 				filelist.push_back("박종현");
 				filelist.push_back("신연비");
@@ -177,6 +173,9 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 				if (pcom) {
 					pcom->send_response(pkt,leng);
 				} 
+				sleep(1);
+				psbd->pimgproc->start(IMGPROC_MODE_RUN);
+				psbd->pimgproc->set_enable_send(true);
 
 			}
 		}
@@ -275,6 +274,9 @@ gpointer main_thread(gpointer data)
 				// 	psbd->pcom_tls->resume();
 				// else
 				// 	psbd->pcom->resume();
+				psbd->pimgproc->set_enable_send(false);
+				psbd->pimgproc->stop();
+
 			}
 			break;
 			}

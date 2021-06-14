@@ -94,6 +94,10 @@ CImgProc::start(eImgProc_Runmode mode/*=IMGPROC_MODE_RUN*/)
 gboolean
 CImgProc::set_enable_send(gboolean enable)
 {
+     if (!thread_run) {
+         printf("imgproc thread is sleeping....\n");
+         return false;
+     }
     printf("set_enable_send()+ Video Stream:%s\n", enable ? "Enable" : "Disable");
     ImgProcMsg *pmsg = new ImgProcMsg;
     pmsg->msgid = enable ? IMGPROC_ENABLE : IMGPROC_DISABLE ;
