@@ -35,6 +35,9 @@ CProtocolManager::create_protocol_instance(MsgReq id)
 		case MSG_ACK: 
 			cpkt = new CAckProtocol();
 			break;
+		case MSG_VIDEO_PLAY: 
+			cpkt = new CTestMode_PlayVideoProtocol();
+			break;
 		default:
 			break;
 	}

@@ -73,6 +73,17 @@ public:
 
 
 /*---------------------------
+		CTestMode_PlayVideoProtocol
+---------------------------*/
+class CTestMode_PlayVideoProtocol : public CBaseProtocol
+{
+public:
+	CTestMode_PlayVideoProtocol():CBaseProtocol(MSG_VIDEO_PLAY, &msg){};
+	CTestMode_PlayVideoProtocol(uint32_t indx);
+	protocol_msg::TestMode_PlayVideo msg;
+};
+
+/*---------------------------
 		CAckProtocol
 ---------------------------*/
 class CAckProtocol : public CBaseProtocol

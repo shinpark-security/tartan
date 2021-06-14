@@ -29,6 +29,29 @@ static gpointer main_thread(gpointer data);
 
 
 /* implementation */
+vector<struct Paths> get_video_files(string videopath)
+{
+    std::vector<struct Paths> paths;
+    std::cout << "Parsing Directory: " << videopath << std::endl;
+    DIR *dir;
+    struct dirent *entry;
+    if ((dir = opendir (videopath.c_str())) != NULL) {
+        while ((entry = readdir (dir)) != NULL) {
+            std::string readmeCheck(entry->d_name);
+            if (entry->d_type != DT_DIR ) {
+                struct Paths tempPaths;
+                tempPaths.fileName = std::string(entry->d_name);				
+				if (tempPaths.fileName.substr(tempPaths.fileName.length()-3)=="mp4") {
+					tempPaths.absPath = videopath + "/" + tempPaths.fileName;
+					paths.push_back(tempPaths);
+				}
+            }
+        }
+        closedir (dir);
+    }
+	return paths;
+}
+
 static gboolean on_handle_sigterm(gpointer pUserData)
 {
 	tServiceData *psbd = (tServiceData *)pUserData;
@@ -77,7 +100,9 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
  
 
 	if (psbd->sstate != prev_sstate ) {
+		printf("\n-----------------------------------------------------------\n");
 		printf("SYSTEM STATE: %d\n",psbd->sstate );
+		printf("\n-----------------------------------------------------------\n");
 	}
 	switch(psbd->sstate)
 	{
@@ -135,6 +160,7 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 		psbd->sstate=SS_READY;
 		break;
 	case SS_RUN:
+		printf("SS_RUN\n");
 		if (pbase && pbase->msg_type == MSG_CONTROL_MODE)
 		{
 			CControlModeProtocol *ctl=dynamic_cast<CControlModeProtocol*>(pbase);
@@ -147,25 +173,24 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 				sleep(1);
 				psbd->pimgproc->start(IMGPROC_MODE_RUN);
 				psbd->pimgproc->set_enable_send(true);
+				psbd->sstate=SS_RUN;
 			}
 			else if (ctl->msg.mode() == protocol_msg::ControlMode::LEARNING) {
 				psbd->pimgproc->set_enable_send(false);
 				psbd->pimgproc->stop();
 				sleep(1);
-				psbd->pimgproc->video_file="../friends640x480.mp4";
-				psbd->pimgproc->start(IMGPROC_MODE_TESTRUN);
+				psbd->pimgproc->start(IMGPROC_MODE_LEARNING);
 				psbd->pimgproc->set_enable_send(true);
+				psbd->sstate=SS_LEARN_START;
 			}
 			else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN) {
 				psbd->pimgproc->set_enable_send(false);
 				psbd->pimgproc->stop();
 				vector <string> filelist;
-				filelist.push_back("박종현");
-				filelist.push_back("신연비");
-				filelist.push_back("김성수");
-				filelist.push_back("이재원");
-				filelist.push_back("이성진");
-				filelist.push_back("김서광");
+				auto files=get_video_files("..");
+				for (auto f : files) 
+					filelist.push_back(f.fileName);
+
 				CProtocolManager proto_man;
 				CVideoFileListProtocol vlist(filelist);
 				size_t leng = 0;
@@ -173,25 +198,113 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 				if (pcom) {
 					pcom->send_response(pkt,leng);
 				} 
-				sleep(1);
-				psbd->pimgproc->start(IMGPROC_MODE_RUN);
-				psbd->pimgproc->set_enable_send(true);
-
+				psbd->sstate=SS_TESTRUN_START;
 			}
 		}
 		break;
 	case SS_LEARN_START:
-	break;
+		break;
 	case SS_LEARN:
-	break;
+		break;
 	case SS_LEARN_DONE:
 	break;
 	case SS_TESTRUN_START:
-	break;
+		printf("SS_TESTRUN_START\n");
+		if (pbase && pbase->msg_type == MSG_VIDEO_PLAY)
+		{
+			CTestMode_PlayVideoProtocol *play=dynamic_cast<CTestMode_PlayVideoProtocol*>(pbase);
+			printf("Video file index=%d\n",play->msg.index());
+			if (play->msg.index()>=0 ) {
+				
+				CProtocolManager proto_man;
+				CAckProtocol ack(protocol_msg::Ack::ACK_OK, play->msg.index());
+				size_t leng = 0;
+				unsigned char *pkt = proto_man.make_packet(ack, &leng);
+				if (pcom) pcom->send_response(pkt,leng);
+				vector <string> filelist;
+				auto files=get_video_files("..");
+				psbd->pimgproc->video_file=files[play->msg.index()].absPath;
+				psbd->pimgproc->start(IMGPROC_MODE_TESTRUN);
+				psbd->pimgproc->set_enable_send(true);
+				psbd->sstate=SS_TESTRUN;
+			}
+			else {
+				CProtocolManager proto_man;
+				CAckProtocol ack(protocol_msg::Ack::ACK_NOK, play->msg.index());
+				size_t leng = 0;
+				unsigned char *pkt = proto_man.make_packet(ack, &leng);
+				if (pcom) pcom->send_response(pkt,leng);
+				psbd->sstate=SS_RUN;
+			}
+		}	
+		break;
 	case SS_TESTRUN:
-	break;
+		printf("SS_TESTRUN\n");
+		if (pbase && pbase->msg_type == MSG_CONTROL_MODE)
+		{
+			CControlModeProtocol *ctl=dynamic_cast<CControlModeProtocol*>(pbase);
+
+			printf("Control MODE=%d\n ", ctl->msg.mode());
+
+			if (ctl->msg.mode() == protocol_msg::ControlMode::RUN) {
+				psbd->pimgproc->set_enable_send(false);
+				psbd->pimgproc->stop();
+				sleep(1);
+				psbd->pimgproc->start(IMGPROC_MODE_RUN);
+				psbd->pimgproc->set_enable_send(true);
+				psbd->sstate=SS_RUN;
+			}
+			else if (ctl->msg.mode() == protocol_msg::ControlMode::LEARNING) {
+				psbd->pimgproc->set_enable_send(false);
+				psbd->pimgproc->stop();
+				sleep(1);
+				psbd->pimgproc->start(IMGPROC_MODE_LEARNING);
+				psbd->pimgproc->set_enable_send(true);
+				psbd->sstate=SS_LEARN_START;
+			}
+			else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN) {
+				psbd->pimgproc->set_enable_send(false);
+				psbd->pimgproc->stop();
+				vector <string> filelist;
+				auto files=get_video_files("..");
+				for (auto f : files) 
+					filelist.push_back(f.fileName);
+
+				CProtocolManager proto_man;
+				CVideoFileListProtocol vlist(filelist);
+				size_t leng = 0;
+				unsigned char *pkt = proto_man.make_packet(vlist, &leng);
+				if (pcom) {
+					pcom->send_response(pkt,leng);
+				} 
+				psbd->sstate=SS_TESTRUN_START;
+			}
+		}
+		else if (pbase && pbase->msg_type == MSG_VIDEO_PLAY)
+		{
+			CTestMode_PlayVideoProtocol *play=dynamic_cast<CTestMode_PlayVideoProtocol*>(pbase);
+			printf("Video file index=%d\n",play->msg.index());
+			if (play->msg.index()>=0 ) {
+				psbd->pimgproc->set_enable_send(false);
+				psbd->pimgproc->stop();
+				sleep(1);
+				
+				CProtocolManager proto_man;
+				CAckProtocol ack(protocol_msg::Ack::ACK_OK, play->msg.index());
+				size_t leng = 0;
+				unsigned char *pkt = proto_man.make_packet(ack, &leng);
+				if (pcom) pcom->send_response(pkt,leng);
+				vector <string> filelist;
+				auto files=get_video_files("..");
+				psbd->pimgproc->video_file=files[play->msg.index()].absPath;
+				psbd->pimgproc->start(IMGPROC_MODE_TESTRUN);
+				psbd->pimgproc->set_enable_send(true);
+				psbd->sstate=SS_TESTRUN;
+			}			
+		}	
+		break;
 	case SS_TESTRUN_DONE:
-	break;
+		break;
 	}
 
 	if (pbase) {	
@@ -224,7 +337,7 @@ gpointer main_thread(gpointer data)
 
 	psbd->pcom->start();
 	psbd->pcom_tls->start();
-	psbd->pimgproc->start();
+	// psbd->pimgproc->start();
 
 	while (psbd->thread_run)
 	{
@@ -276,6 +389,7 @@ gpointer main_thread(gpointer data)
 				// 	psbd->pcom->resume();
 				psbd->pimgproc->set_enable_send(false);
 				psbd->pimgproc->stop();
+				psbd->sstate=SS_READY;
 
 			}
 			break;
@@ -362,7 +476,6 @@ int main(int argc, char *argv[])
 	// printf("a=%s\n", a);
 
 	// return 0;
-
 
 	// // int ret=db.check_passwd("lg",auth.get_passwd_enc("lg1234"));
 	// // printf("RET=%d\n", ret);

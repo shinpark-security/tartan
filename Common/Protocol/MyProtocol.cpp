@@ -73,6 +73,14 @@ CVideoFileListProtocol::CVideoFileListProtocol(vector<string> &videos)
 	msg.set_nfiles(videos.size());
 }
 
+/*---------------------------
+		CTestMode_PlayVideoProtocol
+---------------------------*/
+CTestMode_PlayVideoProtocol::CTestMode_PlayVideoProtocol(uint32_t indx)
+:CBaseProtocol(MSG_VIDEO_PLAY, &msg)
+{
+	msg.set_index(indx);
+}
 
 /*---------------------------
 		CAckProtocol
