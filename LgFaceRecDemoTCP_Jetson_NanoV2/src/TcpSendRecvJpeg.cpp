@@ -24,10 +24,15 @@ int TcpSendImageAsJpegTLS(TTcpConnectedPort * TcpConnectedPort,cv::Mat Image)
     if (!TcpConnectedPort) return -1;
     unsigned int imagesize;
     cv::imencode(".jpg", Image, sendbuff, param);
-    imagesize=htonl(sendbuff.size()); // convert image size to network format
-	if (WriteDataTcpTLS(TcpConnectedPort,(unsigned char *)&imagesize,sizeof(imagesize))!=sizeof(imagesize))
-		return(-1);
-    return(WriteDataTcpTLS(TcpConnectedPort,sendbuff.data(), sendbuff.size()));
+    CProtocolManager proto_man;
+    CImageProtocol imgpkt(sendbuff.size(), (unsigned char*)sendbuff.data());
+    size_t leng = 0;
+    unsigned char *pkt = proto_man.make_packet(imgpkt, &leng);
+    ssize_t ret=WriteDataTcpTLS(TcpConnectedPort, pkt, leng);  
+
+    // if (WriteDataTcp(TcpConnectedPort,(unsigned char *)&imagesize,sizeof(imagesize))!=sizeof(imagesize))
+    // return(-1);
+    return ret;
 }
 
 int TcpSendImageAsJpeg(TTcpConnectedPort * TcpConnectedPort, cv::Mat Image)

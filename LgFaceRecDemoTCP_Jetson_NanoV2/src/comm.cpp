@@ -293,11 +293,8 @@ CComm::comm_thread(gpointer data)
                 {
                     try
                     {
-                        if (pcom->tls_mode)
-                            ret = wolfSSL_recv(pcom->TcpConnectedPort->ssl, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT);
-                        else
-                            ret = recv(pcom->TcpConnectedPort->ConnectedFd, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT);
-                        if (ret == 0)
+						ret = recv(pcom->TcpConnectedPort->ConnectedFd, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT);
+						if (ret == 0)
                         {
                             printf("Check ERROR...............\n");
                             pcom->tcp_connected = false;
