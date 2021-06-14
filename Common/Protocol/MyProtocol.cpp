@@ -69,7 +69,7 @@ CServerSettingProtocol::CServerSettingProtocol(protocol_msg::ServerSetting::CtlM
 CVideoFileListProtocol::CVideoFileListProtocol(vector<string> &videos)
 :CBaseProtocol(MSG_VIDEO_FILE_LIST, &msg)
 {
-	 
+	*msg.mutable_filelist() = { videos.begin(), videos.end() };	 
 }
 
 
