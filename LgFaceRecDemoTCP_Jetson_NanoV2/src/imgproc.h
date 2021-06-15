@@ -25,6 +25,8 @@ typedef struct
 {
     _e_IMGPROC_MSG_ID msgid;
     string name;
+    int nshots;
+    int n;
 } ImgProcMsg;
 
 class CImgProc
@@ -40,7 +42,7 @@ public:
     int kbhit();
     int getch();
     gboolean set_enable_send(gboolean enable);
-    gboolean add_new_user(const string name);
+    gboolean add_new_user(const string name, int nshot, int n);
     static gpointer imgproc_thread(gpointer data);
     string camera_dev;
     gboolean init_facenet();

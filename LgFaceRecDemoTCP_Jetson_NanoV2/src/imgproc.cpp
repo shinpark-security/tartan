@@ -31,6 +31,8 @@ struct facenet_data {
     std::vector<struct Bbox> outputBbox;
     VideoStreamer *fileStreamer;
     VideoStreamer *cameraStreamer;
+    CMydb db;
+
 };
 
 
@@ -147,12 +149,14 @@ CImgProc::getch()
 // #define LOG_TIMES
 
 gboolean
-CImgProc::add_new_user(const string name)
+CImgProc::add_new_user(const string name, int nshot, int n)
 {
     printf("add_new_user()+\n");
     ImgProcMsg *pmsg = new ImgProcMsg;
     pmsg->msgid = IMGPROC_ADDNEW;
     pmsg->name = name;
+    pmsg->nshots=nshot;
+    pmsg->n=n;
     g_async_queue_push(imgproc_queue, pmsg);
     return true;
 }
@@ -214,9 +218,8 @@ CImgProc::init_facenet()
     }
 #else
     vector<tFaceEntity> facelist;
-    CMydb db;
     cv::Mat image = cv::Mat(videoFrameHeight, videoFrameWidth, 16);
-    if (db.list_faces(&facelist)) {
+    if (pfd->db.list_faces(&facelist)) {
         for (int i=0;i<facelist.size();i++) {
             image.data = facelist[i].data;
             printf("DB Name:%s\n", facelist[i].name.c_str());
@@ -249,6 +252,7 @@ CImgProc::imgproc_thread(gpointer data)
     CImgProc *pthis = (CImgProc *)data;
     facenet_data *pfd=(facenet_data*)pthis->pfacenet_data;
     eImgProc_Runmode running_mode=pthis->run_mode;
+    string msg;
 
     printf("Video Thread running mode=%d\n", running_mode);
     VideoStreamer *videoStreamer;
@@ -259,7 +263,7 @@ CImgProc::imgproc_thread(gpointer data)
             if (pthis->camera_dev == "") 
             {
                 bool isCSICam = true;
-                pfd->cameraStreamer = new VideoStreamer(0, pthis->videoFrameWidth, pthis->videoFrameHeight, 60, isCSICam);
+                pfd->cameraStreamer = new VideoStreamer(0, pthis->videoFrameWidth, pthis->videoFrameHeight, 10, isCSICam);
             }
             else
             {
@@ -304,15 +308,34 @@ CImgProc::imgproc_thread(gpointer data)
     // loop over frames with inference
     auto globalTimeStart = chrono::steady_clock::now();
 
+    int learning_n_shot=0;
+    int learning_n=0;
+    int learning_cnt=0;
+    string learning_name="";
     while (pthis->thread_run)
     {
+        if (running_mode==IMGPROC_MODE_LEARNING) {
+            if (learning_n_shot==0) {
+                msg="Please enter a name";
+            } 
+            else {
+                msg="Taking a picture ";
+                msg+=to_string(learning_n);
+                msg+="/";
+                msg+=to_string(learning_n_shot);
+            }
+        }
+        else {
+            msg="";
+        }
+
         videoStreamer->getFrame(frame);
         if (frame.empty())
         {
             std::cout << "Empty frame! Exiting...\n Try restarting nvargus-daemon by "
                          "doing: sudo systemctl restart nvargus-daemon"
                       << std::endl;
-            break;
+            continue;
         }
         // Create a destination to paint the source into.
         dst_img.create(frame.size(), frame.type());
@@ -332,11 +355,14 @@ CImgProc::imgproc_thread(gpointer data)
         pfd->faceNet->forward(frame, pfd->outputBbox);
         auto endForward = chrono::steady_clock::now();
         auto startFeatM = chrono::steady_clock::now();
-        pfd->faceNet->featureMatching(frame);
+        string classname=pfd->faceNet->featureMatching(frame,msg);
         auto endFeatM = chrono::steady_clock::now();
         pfd->faceNet->resetVariables();
 
+        printf("\nCLASS=%s\n", classname.c_str());
         // if (TcpSendImageAsJpeg(TcpConnectedPort,frame)<0)  break;
+
+
 
         // printf("send jpg\n");
         if (pthis->enable_send && pthis->main_queue)
@@ -346,6 +372,51 @@ CImgProc::imgproc_thread(gpointer data)
             pmsg->mat = frame.clone(); //Mat copy
             g_async_queue_push(pthis->main_queue, pmsg);
         }
+        // cv::waitKey(50);
+        sleep(0.0001);
+
+
+        if (learning_n_shot>0 && learning_n<=learning_n_shot) 
+        {
+            // if (classname=="New Person" && pthis->main_queue)
+            {
+                auto dTimeStart = chrono::steady_clock::now();
+                videoStreamer->getFrame(frame);
+                src_gpu.upload(frame);
+                cv::cuda::rotate(src_gpu, dst_gpu, src_gpu.size(), 180, src_gpu.size().width, src_gpu.size().height);
+                dst_gpu.download(frame);
+
+                pfd->outputBbox = pfd->mtCNN->findFace(frame);
+                pfd->faceNet->forwardAddFace(frame,pfd->outputBbox, learning_name);
+
+                // int init_values[2] = { cv::IMWRITE_JPEG_QUALITY,80 }; //default(95) 0-100
+                // std::vector<int> param (&init_values[0], &init_values[0]+2);
+                // std::vector<uchar> facebuff;//buffer for coding
+                // unsigned int imagesize;
+                // cv::imencode(".jpg", frame, facebuff, param);
+                size_t sizeInBytes = frame.total() * frame.elemSize();
+                pfd->db.add_new_face(learning_name,(char*)frame.data, sizeInBytes);
+
+                MyMsg *p_new_msg = new MyMsg;
+                p_new_msg->msgid = MYMSG_ADD_NEW_TAKEN_A_SHOT;
+                p_new_msg->arg1 = learning_n;
+                g_async_queue_push(pthis->main_queue, p_new_msg);
+
+                pfd->faceNet->resetVariables();
+                auto dTimeEnd = chrono::steady_clock::now();
+                globalTimeStart += (dTimeEnd - dTimeStart);  
+                sleep(1) ;
+                for (int i=0;i<5;i++)
+                    videoStreamer->getFrame(frame);
+                if (learning_n == learning_n_shot)
+                {
+                    learning_n_shot=0;
+                    learning_n=0;
+                }
+
+            }            
+        }
+
 
         //cv::imshow("VideoSource", frame);
         pfd->nbFrames++;
@@ -370,26 +441,11 @@ CImgProc::imgproc_thread(gpointer data)
                 break;
             case IMGPROC_ADDNEW:
             {
-                printf("MSG:%d  ADDNEW name=%s\n", pmsg->msgid, pmsg->name.c_str());
-
-                auto dTimeStart = chrono::steady_clock::now();
-                videoStreamer->getFrame(frame);
-                // Create a destination to paint the source into.
-                dst_img.create(frame.size(), frame.type());
-
-                // Push the images into the GPU
-                src_gpu.upload(frame);
-                cv::cuda::rotate(src_gpu, dst_gpu, src_gpu.size(), 180, src_gpu.size().width, src_gpu.size().height);
-                dst_gpu.download(frame);
-
-                pfd->outputBbox = pfd->mtCNN->findFace(frame);
-
-                // if (TcpSendImageAsJpeg(TcpConnectedPort,frame)<0)  break;
-
-                //cv::imshow("VideoSource", frame);
-                pfd->faceNet->addNewFace(frame, pfd->outputBbox, pmsg->name);
-                auto dTimeEnd = chrono::steady_clock::now();
-                globalTimeStart += (dTimeEnd - dTimeStart);
+                printf("MSG:%d  ADDNEW name=%s nshot=%d current_n=%d\n", pmsg->msgid, pmsg->name.c_str(), pmsg->nshots, pmsg->n);
+                learning_name=pmsg->name;
+                learning_n_shot=pmsg->nshots;
+                learning_n=pmsg->n;
+                learning_cnt=5;
             }
             break;
             }

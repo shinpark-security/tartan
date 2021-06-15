@@ -10,6 +10,7 @@ typedef enum {
     MYMSG_FROM_CLIENT=2,
     MYMSG_NET_CONNECTED=3,
     MYMSG_NET_DISCONNECTED=4,
+    MYMSG_ADD_NEW_TAKEN_A_SHOT=5,
 } _e_MSG_ID;
 
 typedef struct {

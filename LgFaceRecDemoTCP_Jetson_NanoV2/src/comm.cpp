@@ -117,11 +117,11 @@ gboolean
 CComm::connection_wait(void)
 {
     clilen = sizeof(cli_addr);
-    printf("Listening for connections   port=%d TLS Mode=%d\n", tcp_port, tls_mode);
+    // printf("Listening for connections   port=%d TLS Mode=%d\n", tcp_port, tls_mode);
 
     if ((TcpConnectedPort = accept_tcp_connection(TcpListenPort, &cli_addr, &clilen)) == NULL)
     {
-        printf("AcceptTcpConnection Failed\n");
+        // printf("AcceptTcpConnection Failed\n");
         return false;
     }
 
@@ -171,6 +171,12 @@ CComm::send_packet(CBaseProtocol &protocol)
 	unsigned char *pkt = proto_man.make_packet(protocol, &leng);
     ret = send_response(pkt,leng);
 	return ret;
+}
+
+gboolean 
+CComm::send_packet(CBaseProtocol *protocol)
+{
+    return send_packet(*protocol);
 }
 
 gboolean
@@ -252,7 +258,7 @@ CComm::comm_thread(gpointer data)
         // printf("comthread:tls=%d", pcom->tls_mode);
         if (!pcom->tcp_connected)
         {
-            printf("wait for connection..\n");
+            // printf("wait for connection..\n");
             try
             {
                 if (pcom->connection_wait())
@@ -260,6 +266,9 @@ CComm::comm_thread(gpointer data)
                     pcom->tcp_connected = true;
                     pcom->send_msg_to_main_connected(true);
                     printf("Connected.........................TLS=%d\n", pcom->tls_mode);
+                }
+                else { 
+                    sleep(1);
                 }
             }
             catch (int ex)

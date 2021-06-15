@@ -38,6 +38,9 @@ CProtocolManager::create_protocol_instance(MsgReq id)
 		case MSG_VIDEO_PLAY: 
 			cpkt = new CTestMode_PlayVideoProtocol();
 			break;
+		case MSG_LEARNING_ADDUSER: 
+			cpkt = new CLearningMode_AddUser();
+			break;
 		default:
 			break;
 	}

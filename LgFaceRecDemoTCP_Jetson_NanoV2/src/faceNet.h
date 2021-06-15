@@ -18,6 +18,7 @@
 #include <l2norm_helper.h>
 #include "common.h"
 #include "pBox.h"
+#include <string>
 
 using namespace nvinfer1;
 using namespace nvuffparser;
@@ -41,7 +42,7 @@ class FaceNetClassifier
         void doInference(float* inputData, float* output);
         void forwardAddFace(cv::Mat image, std::vector<struct Bbox> outputBbox, const string className);
         void forward(cv::Mat image, std::vector<struct Bbox> outputBbox);
-        void featureMatching(cv::Mat &image);
+        string featureMatching(cv::Mat &image, string msg="");
         void addNewFace(cv::Mat &image, std::vector<struct Bbox> outputBbox);
         void addNewFace(cv::Mat &image, std::vector<struct Bbox> outputBbox, string newName);
         void resetVariables();

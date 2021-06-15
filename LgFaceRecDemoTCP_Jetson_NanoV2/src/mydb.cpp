@@ -36,21 +36,6 @@ CMydb::CMydb()
     // printf("sql v: %s\n", sqlite3_libversion());
     user_db_filename="../tartan_user.db";
     faces_db_filename="../tartan_faces.db";
-    if (access(user_db_filename.c_str(), F_OK) ==0 ) {
-        printf("user database ok\n");
-    } else {
-        printf("initialize user database\n");
-        initialize_database_account();
-        list_alluser();
-    }
-    if (access(faces_db_filename.c_str(), F_OK) ==0) {
-        printf("face database ok\n");
-    } else {
-        printf("initialize face database\n");
-        initialize_database_faces();
-        list_faces();
-    }
-
 }
 
 CMydb::~CMydb()
@@ -277,7 +262,7 @@ CMydb::initialize_database_faces()
         loadInputImage(paths[i].absPath, image, videoFrameWidth, videoFrameHeight);
         ssize_t leng = image.step[0] * image.rows;
         string name = remove_trail_number(paths[i].fileName);
-        printf("%s  -- trimmed :%s\n", paths[i].fileName.c_str(), name.c_str());
+        // printf("%s  -- trimmed :%s\n", paths[i].fileName.c_str(), name.c_str());
         printf("%s : size=%zu  type=%d\n", name.c_str(), leng, image.type());
         add_new_face(name, (char *)image.data, leng, db);
         // cv::imshow("VideoSource", image);
@@ -452,31 +437,19 @@ int CMydb::find_user(string id, string passwd)
 gboolean
 CMydb::start()
 {
-
-    sqlite3_stmt *res;
-
-    int rc = sqlite3_open(":memory:", &db);
-    if (rc != SQLITE_OK)
-    {
-        fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
-        return false;
+    if (access(user_db_filename.c_str(), F_OK) ==0 ) {
+        printf("user database ok\n");
+    } else {
+        printf("initialize user database\n");
+        initialize_database_account();
+        list_alluser();
     }
-
-    rc = sqlite3_prepare_v2(db, "SELECT SQLITE_VERSION()", -1, &res, 0);
-    if (rc != SQLITE_OK)
-    {
-        fprintf(stderr, "Failed to fetch data: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
-        return false;
+    if (access(faces_db_filename.c_str(), F_OK) ==0) {
+        printf("face database ok\n");
+    } else {
+        printf("initialize face database\n");
+        initialize_database_faces();
+        list_faces();
     }
-
-    rc = sqlite3_step(res);
-    if (rc == SQLITE_ROW)
-    {
-        printf("%s\n", sqlite3_column_text(res, 0));
-    }
-    sqlite3_finalize(res);
-
     return true;
 }

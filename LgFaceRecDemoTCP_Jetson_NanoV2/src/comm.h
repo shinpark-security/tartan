@@ -40,6 +40,7 @@ public:
     gboolean send_jpg(const cv::Mat frame);
     gboolean send_response(const unsigned char *buff, size_t len);
     gboolean send_packet(CBaseProtocol &protocol);
+    gboolean send_packet(CBaseProtocol *protocol);
 
     static gpointer comm_thread(gpointer data);
     gboolean send_msg_to_main_connected(gboolean connected);

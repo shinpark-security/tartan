@@ -94,3 +94,15 @@ public:
 	protocol_msg::Ack msg;
 };
 
+
+/*---------------------------
+		CLearningMode_AddUser
+---------------------------*/
+class CLearningMode_AddUser : public CBaseProtocol
+{
+public:
+	CLearningMode_AddUser():CBaseProtocol(MSG_LEARNING_ADDUSER, &msg){};
+	CLearningMode_AddUser(string name, uint32_t n_shots);
+	protocol_msg::LearningMode_AddUser msg;
+};
+

@@ -88,6 +88,18 @@ CTestMode_PlayVideoProtocol::CTestMode_PlayVideoProtocol(uint32_t indx)
 CAckProtocol::CAckProtocol(protocol_msg::Ack::AckType type, uint32_t arg)
 :CBaseProtocol(MSG_ACK, &msg)
 {
-	 
+	msg.set_acktype(type);
+	msg.set_arg(arg);
+}
+
+
+/*---------------------------
+		CLearningMode_AddUser
+---------------------------*/
+CLearningMode_AddUser::CLearningMode_AddUser(string name, uint32_t n_shots)
+:CBaseProtocol(MSG_LEARNING_ADDUSER, &msg)
+{
+	msg.set_name(name);
+	msg.set_n_shots(n_shots);
 }
 

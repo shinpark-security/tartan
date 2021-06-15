@@ -20,6 +20,8 @@
 #include "BaseProtocol.h"
 #include "MyProtocol.h"
 
+using namespace std::chrono;
+
 /* prototypes */
 gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase);
 gboolean thread_start(tServiceData *psbd);
@@ -101,6 +103,8 @@ gboolean state_process_opmode(tServiceData *psbd, CComm *pcom, CBaseProtocol *pb
 			sleep(1);
 			psbd->pimgproc->start(IMGPROC_MODE_RUN);
 			psbd->pimgproc->set_enable_send(true);
+			CAckProtocol ack(protocol_msg::Ack::ACK_OK, 0);
+			if (pcom) pcom->send_packet(ack);
 			psbd->sstate=SS_RUN;
 		}
 		else if (ctl->msg.mode() == protocol_msg::ControlMode::LEARNING) {
@@ -109,6 +113,8 @@ gboolean state_process_opmode(tServiceData *psbd, CComm *pcom, CBaseProtocol *pb
 			sleep(1);
 			psbd->pimgproc->start(IMGPROC_MODE_LEARNING);
 			psbd->pimgproc->set_enable_send(true);
+			CAckProtocol ack(protocol_msg::Ack::ACK_OK, 0);
+			if (pcom) pcom->send_packet(ack);
 			psbd->sstate=SS_LEARN_START;
 		}
 		else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN) {
@@ -126,22 +132,38 @@ gboolean state_process_opmode(tServiceData *psbd, CComm *pcom, CBaseProtocol *pb
 	return true;
 }
 
+typedef struct {
+	string name;
+	int nshots;
+	CComm *pcom;
+	int n;
+	int replied_n;
+} AddUserData;
 
-gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
+gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase, AddUserData &adduser_data)
 {
 	static SystemState prev_sstate=SS_READY;
-
+	// static milliseconds state_start_time= duration_cast< milliseconds >(system_clock::now().time_since_epoch() );		
 	if (psbd->sstate != prev_sstate ) {
 		printf("\n-----------------------------------------------------------\n");
 		printf("SYSTEM STATE: %d\n",psbd->sstate );
 		printf("\n-----------------------------------------------------------\n");
+		// state_start_time = duration_cast< milliseconds >(system_clock::now().time_since_epoch() );		
 	}
+	// milliseconds current_time = duration_cast< milliseconds >(system_clock::now().time_since_epoch() );		
+	// printf("current time=%l diff=%d\n", current_time, current_time - state_start_time);
+	printf("STATE=%d\n",psbd->sstate );
 	switch(psbd->sstate)
 	{
 	case SS_READY:
 		psbd->sstate=SS_LOGIN;
 		psbd->privilege=SP_NONE;
 		psbd->pimgproc->set_enable_send(false);
+		adduser_data.n=0;
+		adduser_data.name="";
+		adduser_data.pcom=nullptr;
+		adduser_data.nshots=0;
+		adduser_data.replied_n=0;
 		break;
 	case SS_LOGIN:
 		if (pbase && pbase->msg_type == MSG_LOGIN)
@@ -163,8 +185,8 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 			else
 			{
 				printf("Login fail.\n");
-				CAckProtocol ack(protocol_msg::Ack::ACK_NOK, -1);
 				if (pcom) {
+					CAckProtocol ack(protocol_msg::Ack::ACK_NOK, -1);
 					pcom->send_packet(ack);
 					sleep(1);
 					pcom->disconnect();
@@ -191,11 +213,66 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 		break;
 	case SS_LEARN_START:
 		state_process_opmode(psbd,pcom,pbase);
+		if (pbase && pbase->msg_type == MSG_LEARNING_ADDUSER)
+		{
+			CLearningMode_AddUser *user=dynamic_cast<CLearningMode_AddUser*>(pbase);
+			printf("Learning mode start Name=%s  nShots=%d\n",user->msg.name().c_str(), user->msg.n_shots());
+			if (user->msg.n_shots()>=0 && user->msg.n_shots()<10 ) {
+				psbd->pimgproc->set_enable_send(false);
+				psbd->pimgproc->stop();
+				CAckProtocol ack(protocol_msg::Ack::ACK_OK, user->msg.n_shots());
+				if (pcom) pcom->send_packet(ack);
+				sleep(1);
+				psbd->pimgproc->start(IMGPROC_MODE_LEARNING);
+				psbd->pimgproc->set_enable_send(true);	
+				adduser_data.n=0;
+				adduser_data.name=user->msg.name();
+				adduser_data.pcom=pcom;
+				adduser_data.nshots=user->msg.n_shots();
+				adduser_data.replied_n=0;
+				psbd->sstate=SS_LEARN;			
+			}			
+			else {
+				CAckProtocol ack(protocol_msg::Ack::ACK_NOK, 10);
+				if (pcom) pcom->send_packet(ack);
+				psbd->sstate=SS_RUN;	
+			}
+		}	
 		break;
 	case SS_LEARN:
+		state_process_opmode(psbd,pcom,pbase);
+		if (adduser_data.pcom) 
+		{
+			if (adduser_data.replied_n>=adduser_data.n) {
+				adduser_data.n++;
+				if (adduser_data.n>adduser_data.nshots) 
+				{
+					printf("counter saturated...\n");
+					psbd->sstate=SS_LEARN_DONE;			
+				} 
+				else 
+				{
+					CAckProtocol ack(protocol_msg::Ack::ACK_OK, adduser_data.n);
+					adduser_data.pcom->send_packet(ack);
+					printf("Taking a shot %d/%d  for user [%s]\n",adduser_data.n, adduser_data.nshots, adduser_data.name.c_str() );
+					psbd->pimgproc->add_new_user(adduser_data.name,adduser_data.nshots, adduser_data.n);
+				}
+			}
+		}
 		break;
 	case SS_LEARN_DONE:
-	break;
+		{
+			printf("Learning compelted.\n");
+			CAckProtocol ack(protocol_msg::Ack::ACK_OK, 0);
+			adduser_data.pcom->send_packet(ack);
+			adduser_data.n=0;
+			adduser_data.name="";
+			adduser_data.pcom=nullptr;
+			adduser_data.nshots=0;
+			adduser_data.replied_n=0;
+			psbd->sstate=SS_LEARN_START;
+		}
+		break;
 	case SS_TESTRUN:
 		printf("SS_TESTRUN\n");
 		state_process_opmode(psbd,pcom,pbase);
@@ -228,9 +305,7 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 		if (pbase->msg_type == MSG_SERVER_SETTING)
 		{
 			CServerSettingProtocol *ctl=dynamic_cast<CServerSettingProtocol*>(pbase);
-
 			printf("Server Setting MODE=%d\n ", ctl->msg.mode());
-
 			if (ctl->msg.mode() == protocol_msg::ServerSetting::CAM_STOP) {
 				psbd->pimgproc->set_enable_send(false);
 			}
@@ -241,6 +316,7 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 
 	}
 
+
 	prev_sstate=psbd->sstate;
 	return true;
 }
@@ -248,9 +324,9 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 
 gpointer main_thread(gpointer data)
 {
-	if (data == nullptr)
-		return nullptr;
+	if (data == nullptr) return nullptr;
 	tServiceData *psbd = (tServiceData *)data;
+	static AddUserData adduser_data;
 
 	psbd->pcom->start();
 	psbd->pcom_tls->start();
@@ -272,67 +348,58 @@ gpointer main_thread(gpointer data)
 			switch (pmsg->msgid)
 			{
 			case MYMSG_FRAME:
-			{
 				printf(".");
 				if (psbd->pcom->thread_run)
 					psbd->pcom->send_jpg(pmsg->mat);
 				if (psbd->pcom_tls->thread_run)
 					psbd->pcom_tls->send_jpg(pmsg->mat);
 				pmsg->mat.release();
-			}
-			break;
+				break;
 			case MYMSG_FROM_CLIENT:
-			{
 				pcom = (CComm *)pmsg->pobj;
 				pbase=(CBaseProtocol *)pmsg->pdata;
-			}
-			break;
+				break;
 			case MYMSG_NET_CONNECTED:
-			{
 				printf("MYMSG_NET_CONNECTED\n");
 				// printf("pcom=%p  pobj=%p\n",psbd->pcom, pmsg->pobj);
 				// if (psbd->pcom==pmsg->pobj)
 				// 	psbd->pcom_tls->pause();
 				// else
 				// 	psbd->pcom->pause();
-			}
-			break;
+				break;
 			case MYMSG_NET_DISCONNECTED:
-			{
 				printf("MYMSG_NET_DISCONNECTED\n");
-				// if (psbd->pcom==pmsg->pobj)
+				if (psbd->pcom==pmsg->pobj) {
+					psbd->pimgproc->set_enable_send(false);
+					psbd->pimgproc->stop();
+					psbd->sstate=SS_READY;
+				}
+				if (psbd->pcom_tls==pmsg->pobj) {
+					psbd->pimgproc->set_enable_send(false);
+					psbd->pimgproc->stop();
+					psbd->sstate=SS_READY;
+				}				
 				// 	psbd->pcom_tls->resume();
 				// else
 				// 	psbd->pcom->resume();
-				psbd->pimgproc->set_enable_send(false);
-				psbd->pimgproc->stop();
-				psbd->sstate=SS_READY;
-
-			}
-			break;
+				break;
+			case MYMSG_ADD_NEW_TAKEN_A_SHOT:
+				adduser_data.replied_n=pmsg->arg1;
+				printf("Taken a picture from thread : %d\n", pmsg->arg1);
+				break;
 			}
 		}
-		steate_machine(psbd, pcom, pbase);
+		steate_machine(psbd, pcom, pbase, adduser_data);
+
 		if (pbase) delete pbase;
 		if (pmsg) delete pmsg;
-
-
-		// printf("main thread...\n");
-#if 1 //temp for test
-		// psbd->pimgproc->set_enable_send(true);
-#endif
+		pbase=nullptr;
+		pmsg=nullptr;
 	}
 
-	if (psbd->pimgproc) {
-		psbd->pimgproc->stop();
-	}
-	if (psbd->pcom)
-	{
-		psbd->pcom->stop();
-	}
-	if (psbd->pcom_tls) {
-		psbd->pcom_tls->stop();
-	}
+	if (psbd->pimgproc) psbd->pimgproc->stop();
+	if (psbd->pcom)     psbd->pcom->stop();
+	if (psbd->pcom_tls) psbd->pcom_tls->stop();
 }
 
 gboolean thread_stop(tServiceData *psbd)
@@ -366,14 +433,6 @@ extern void print_pkt_header(const unsigned char* buff,int size) ;
 
 int main(int argc, char *argv[])
 {
-	// // CMydb db;
-	// // // db.start();
-	// // // db.initialize_database_faces();
-	// // db.list_faces();
-	// // // db.list_alluser();
-
-	// // return 0;
-	// // // CAuth auth;
 	// CCyper cyp;
 	// unsigned char a[50];
 	// unsigned char b[50];
@@ -394,20 +453,22 @@ int main(int argc, char *argv[])
 
 	// return 0;
 
-	// // int ret=db.check_passwd("lg",auth.get_passwd_enc("lg1234"));
-	// // printf("RET=%d\n", ret);
-	// // // auth.get_passwd_enc("lg1234");
 	tServiceData sbd;
 	sbd.sstate=SS_READY;
 	sbd.queue = g_async_queue_new();
+
+	CMydb db; //just once
+	db.start();
+
 	sbd.pcom = new CComm(false, TCP_PORT_NON_SECURE, sbd.queue);
+	if (sbd.pcom==nullptr) return 1;
 	sbd.pcom_tls = new CComm(true, TCP_PORT_SECURE, sbd.queue);
-	if (argc == 2)
-	{
-		sbd.pimgproc = new CImgProc(sbd.queue , argv[1]);
-	}
-	else
-		sbd.pimgproc = new CImgProc(sbd.queue );
+	if (sbd.pcom_tls==nullptr) return 2;
+	if (argc == 2)  sbd.pimgproc = new CImgProc(sbd.queue , argv[1]);
+	else            sbd.pimgproc = new CImgProc(sbd.queue );
+	if (sbd.pimgproc==nullptr) return 3;
+	
+	
 
     /* Initialize wolfSSL */
     wolfSSL_Init();

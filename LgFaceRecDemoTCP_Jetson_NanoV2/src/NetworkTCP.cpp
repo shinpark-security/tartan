@@ -47,8 +47,11 @@ TTcpListenPort *OpenTcpListenPort(short localport)
 		perror("socket failed");
 		return(NULL);  
 	}
-	int option = 1; 
 
+	int flag = fcntl(TcpListenPort->ListenFd, F_GETFL, 0);
+    fcntl(TcpListenPort->ListenFd, F_SETFL, flag | O_NONBLOCK);
+
+	int option = 1; 
 	if(setsockopt(TcpListenPort->ListenFd,SOL_SOCKET,SO_REUSEADDR,(char*)&option,sizeof(option)) < 0)
 	{
 		CloseTcpListenPort(&TcpListenPort);
@@ -153,7 +156,7 @@ TTcpConnectedPort *AcceptTcpConnectionTLS(TTcpListenPort *TcpListenPort,
 
 	if (TcpConnectedPort->ConnectedFd== BAD_SOCKET_FD) 
 	{
-		perror("ERROR on accept");
+		// perror("ERROR on accept");
 		delete TcpConnectedPort;
 		return NULL;
 	}
@@ -211,7 +214,7 @@ TTcpConnectedPort *AcceptTcpConnection(TTcpListenPort *TcpListenPort,
 
 	if (TcpConnectedPort->ConnectedFd== BAD_SOCKET_FD) 
 	{
-		perror("ERROR on accept");
+		// perror("ERROR on accept");
 		delete TcpConnectedPort;
 		return NULL;
 	}
