@@ -22,11 +22,13 @@ public:
     gboolean initialize_database_account();
     gboolean initialize_database_faces();
     gboolean list_alluser() ;
-    gboolean list_faces(vector<tFaceEntity> *facelist/*=nullptr*/) ;
-    gboolean add_new_face(string name, const char *buffer, ssize_t size, sqlite3 *db/*=nullptr*/);
+    gboolean list_faces(vector<tFaceEntity> *facelist=nullptr) ;
+    gboolean add_new_face(string name, const char *buffer, ssize_t size, sqlite3 *db=nullptr);
     int find_user(string id, string passwd);
     int add_or_update_name(sqlite3 *db,string name);
     string remove_trail_number(string fname) ;
+    string user_db_filename;
+    string faces_db_filename;
 private:
     sqlite3* db;
 };

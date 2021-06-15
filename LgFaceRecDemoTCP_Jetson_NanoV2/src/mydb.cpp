@@ -3,6 +3,7 @@
 #include <string>
 #include <stdio.h>
 #include <iostream>
+#include <unistd.h>
 #include <opencv2/core.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
@@ -32,7 +33,24 @@
 
 CMydb::CMydb()
 {
-    printf("sql v: %s\n", sqlite3_libversion());
+    // printf("sql v: %s\n", sqlite3_libversion());
+    user_db_filename="../tartan_user.db";
+    faces_db_filename="../tartan_faces.db";
+    if (access(user_db_filename.c_str(), F_OK) ==0 ) {
+        printf("user database ok\n");
+    } else {
+        printf("initialize user database\n");
+        initialize_database_account();
+        list_alluser();
+    }
+    if (access(faces_db_filename.c_str(), F_OK) ==0) {
+        printf("face database ok\n");
+    } else {
+        printf("initialize face database\n");
+        initialize_database_faces();
+        list_faces();
+    }
+
 }
 
 CMydb::~CMydb()
@@ -44,7 +62,7 @@ CMydb::initialize_database_account()
 {
     sqlite3 *db;
     char *err_msg = 0;
-    int rc = sqlite3_open("tartan.db", &db);
+    int rc = sqlite3_open(user_db_filename.c_str(), &db);
 
     if (rc != SQLITE_OK)
     {
@@ -122,14 +140,14 @@ int CMydb::add_or_update_name(sqlite3 *db, string name)
 }
 
 gboolean
-CMydb::add_new_face(string name, const char *buffer, ssize_t size, sqlite3 *db = nullptr)
+CMydb::add_new_face(string name, const char *buffer, ssize_t size, sqlite3 *db /*= nullptr*/)
 {
     char *err_msg = 0;
     gboolean need_close = false;
 
     if (db == nullptr)
     {
-        int rc = sqlite3_open("faces.db", &db);
+        int rc = sqlite3_open(faces_db_filename.c_str(), &db);
         if (rc != SQLITE_OK)
         {
             fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -223,7 +241,7 @@ CMydb::initialize_database_faces()
     int videoFrameHeight = 480;
     cv::Mat image;
 
-    int rc = sqlite3_open("faces.db", &db);
+    int rc = sqlite3_open(faces_db_filename.c_str(), &db);
     if (rc != SQLITE_OK)
     {
         fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -262,9 +280,8 @@ CMydb::initialize_database_faces()
         printf("%s  -- trimmed :%s\n", paths[i].fileName.c_str(), name.c_str());
         printf("%s : size=%zu  type=%d\n", name.c_str(), leng, image.type());
         add_new_face(name, (char *)image.data, leng, db);
-
-        cv::imshow("VideoSource", image);
-        ret = cv::waitKey(1);
+        // cv::imshow("VideoSource", image);
+        // ret = cv::waitKey(1);
     }
 
     sqlite3_close(db);
@@ -279,7 +296,7 @@ CMydb::list_faces(vector<tFaceEntity> *facelist/*=nullptr*/)
     int videoFrameWidth = 640;
     int videoFrameHeight = 480;
 
-    int rc = sqlite3_open("faces.db", &db);
+    int rc = sqlite3_open(faces_db_filename.c_str(), &db);
     if (rc != SQLITE_OK)
     {
         fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -341,7 +358,7 @@ CMydb::list_alluser()
     sqlite3 *db;
     char *err_msg = 0;
 
-    int rc = sqlite3_open("tartan.db", &db);
+    int rc = sqlite3_open(user_db_filename.c_str(), &db);
     if (rc != SQLITE_OK)
     {
         fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -385,7 +402,7 @@ int CMydb::find_user(string id, string passwd)
     sqlite3 *db;
     char *err_msg = 0;
 
-    int rc = sqlite3_open("tartan.db", &db);
+    int rc = sqlite3_open(user_db_filename.c_str(), &db);
     if (rc != SQLITE_OK)
     {
         fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));

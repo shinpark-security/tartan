@@ -88,6 +88,44 @@ gboolean thread_start(tServiceData *psbd)
 	return ret;
 }
 
+gboolean state_process_opmode(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
+{
+	if (pbase && pbase->msg_type == MSG_CONTROL_MODE)
+	{
+		CControlModeProtocol *ctl=dynamic_cast<CControlModeProtocol*>(pbase);
+
+		printf("Control MODE=%d\n ", ctl->msg.mode());
+		if (ctl->msg.mode() == protocol_msg::ControlMode::RUN) {
+			psbd->pimgproc->set_enable_send(false);
+			psbd->pimgproc->stop();
+			sleep(1);
+			psbd->pimgproc->start(IMGPROC_MODE_RUN);
+			psbd->pimgproc->set_enable_send(true);
+			psbd->sstate=SS_RUN;
+		}
+		else if (ctl->msg.mode() == protocol_msg::ControlMode::LEARNING) {
+			psbd->pimgproc->set_enable_send(false);
+			psbd->pimgproc->stop();
+			sleep(1);
+			psbd->pimgproc->start(IMGPROC_MODE_LEARNING);
+			psbd->pimgproc->set_enable_send(true);
+			psbd->sstate=SS_LEARN_START;
+		}
+		else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN) {
+			psbd->pimgproc->set_enable_send(false);
+			psbd->pimgproc->stop();
+			vector <string> filelist;
+			auto files=get_video_files("..");
+			for (auto f : files) 
+				filelist.push_back(f.fileName);
+			CVideoFileListProtocol vlist(filelist);
+			if (pcom) pcom->send_packet(vlist);
+			psbd->sstate=SS_TESTRUN;
+		}
+	}	
+	return true;
+}
+
 
 gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 {
@@ -149,43 +187,10 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 		break;
 	case SS_RUN:
 		printf("SS_RUN\n");
-		if (pbase && pbase->msg_type == MSG_CONTROL_MODE)
-		{
-			CControlModeProtocol *ctl=dynamic_cast<CControlModeProtocol*>(pbase);
-
-			printf("Control MODE=%d\n ", ctl->msg.mode());
-
-			if (ctl->msg.mode() == protocol_msg::ControlMode::RUN) {
-				psbd->pimgproc->set_enable_send(false);
-				psbd->pimgproc->stop();
-				sleep(1);
-				psbd->pimgproc->start(IMGPROC_MODE_RUN);
-				psbd->pimgproc->set_enable_send(true);
-				psbd->sstate=SS_RUN;
-			}
-			else if (ctl->msg.mode() == protocol_msg::ControlMode::LEARNING) {
-				psbd->pimgproc->set_enable_send(false);
-				psbd->pimgproc->stop();
-				sleep(1);
-				psbd->pimgproc->start(IMGPROC_MODE_LEARNING);
-				psbd->pimgproc->set_enable_send(true);
-				psbd->sstate=SS_LEARN_START;
-			}
-			else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN) {
-				psbd->pimgproc->set_enable_send(false);
-				psbd->pimgproc->stop();
-				vector <string> filelist;
-				auto files=get_video_files("..");
-				for (auto f : files) 
-					filelist.push_back(f.fileName);
-
-				CVideoFileListProtocol vlist(filelist);
-				if (pcom) pcom->send_packet(vlist);
-				psbd->sstate=SS_TESTRUN;
-			}
-		}
+		state_process_opmode(psbd,pcom,pbase);
 		break;
 	case SS_LEARN_START:
+		state_process_opmode(psbd,pcom,pbase);
 		break;
 	case SS_LEARN:
 		break;
@@ -193,41 +198,8 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase)
 	break;
 	case SS_TESTRUN:
 		printf("SS_TESTRUN\n");
-		if (pbase && pbase->msg_type == MSG_CONTROL_MODE)
-		{
-			CControlModeProtocol *ctl=dynamic_cast<CControlModeProtocol*>(pbase);
-
-			printf("Control MODE=%d\n ", ctl->msg.mode());
-
-			if (ctl->msg.mode() == protocol_msg::ControlMode::RUN) {
-				psbd->pimgproc->set_enable_send(false);
-				psbd->pimgproc->stop();
-				sleep(1);
-				psbd->pimgproc->start(IMGPROC_MODE_RUN);
-				psbd->pimgproc->set_enable_send(true);
-				psbd->sstate=SS_RUN;
-			}
-			else if (ctl->msg.mode() == protocol_msg::ControlMode::LEARNING) {
-				psbd->pimgproc->set_enable_send(false);
-				psbd->pimgproc->stop();
-				sleep(1);
-				psbd->pimgproc->start(IMGPROC_MODE_LEARNING);
-				psbd->pimgproc->set_enable_send(true);
-				psbd->sstate=SS_LEARN_START;
-			}
-			else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN) {
-				psbd->pimgproc->set_enable_send(false);
-				psbd->pimgproc->stop();
-				vector <string> filelist;
-				auto files=get_video_files("..");
-				for (auto f : files) 
-					filelist.push_back(f.fileName);
-				CVideoFileListProtocol vlist(filelist);
-				if (pcom) pcom->send_packet(vlist);
-				psbd->sstate=SS_TESTRUN;
-			}
-		}
-		else if (pbase && pbase->msg_type == MSG_VIDEO_PLAY)
+		state_process_opmode(psbd,pcom,pbase);
+		if (pbase && pbase->msg_type == MSG_VIDEO_PLAY)
 		{
 			CTestMode_PlayVideoProtocol *play=dynamic_cast<CTestMode_PlayVideoProtocol*>(pbase);
 			printf("Video file index=%d\n",play->msg.index());
