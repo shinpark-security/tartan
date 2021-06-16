@@ -222,7 +222,7 @@ CImgProc::init_facenet()
     if (pfd->db.list_faces(&facelist)) {
         for (int i=0;i<facelist.size();i++) {
             image.data = facelist[i].data;
-            printf("DB Name:%s\n", facelist[i].name.c_str());
+            printf("face:%s\n", facelist[i].name.c_str());
             pfd->outputBbox = pfd->mtCNN->findFace(image);
             pfd->faceNet->forwardAddFace(image, pfd->outputBbox, facelist[i].name);
             pfd->faceNet->resetVariables();

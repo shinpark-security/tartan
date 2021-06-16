@@ -20,7 +20,6 @@ enum SystemState {
     SS_LEARN,
     SS_LEARN_DONE,
     SS_TESTRUN,
-    SS_TESTRUN_DONE,
 };
 
 enum SessionPrivilege {

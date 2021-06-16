@@ -7,6 +7,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
+#include "cyper.h"
 
 #define SQL_CHECK_QUIT(INFO, RET)                  \
     do                                             \
@@ -30,6 +31,12 @@
     {                                                             \
         fprintf(stderr, "%s : '%s'\n", INFO, sqlite3_errmsg(db)); \
     } while (0)
+
+typedef struct {
+    size_t size;
+    size_t encrypted_size;
+    unsigned char payload[1];
+} sDBImg;
 
 CMydb::CMydb()
 {
@@ -77,7 +84,7 @@ int CMydb::add_or_update_name(sqlite3 *db, string name)
 {
     char *err_msg = 0;
     int id = -1;
-
+    CCyper cyp;
     sqlite3_stmt *stmt;
     int rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
     SQL_CHECK("Trassaction begin");
@@ -105,7 +112,7 @@ int CMydb::add_or_update_name(sqlite3 *db, string name)
     {
         int ret;
         string sql = "INSERT INTO names(name) VALUES('";
-        sql += name;
+        sql += cyp.encrypt_aes(name);
         sql += "');";
         // printf("sql:%s\n", sql.c_str());
         rc = sqlite3_exec(db, sql.c_str(), 0, 0, &err_msg);
@@ -117,7 +124,7 @@ int CMydb::add_or_update_name(sqlite3 *db, string name)
         else
         {
             id = sqlite3_last_insert_rowid(db);
-            printf("NEW USER:%s ID=%d\n", name.c_str(), id);
+            // printf("NEW USER:%s ID=%d\n", name.c_str(), id);
         }
     }
 
@@ -162,19 +169,30 @@ CMydb::add_new_face(string name, const char *buffer, ssize_t size, sqlite3 *db /
     }
     else
     {
-        rc = sqlite3_bind_blob(stmt, 1, buffer, size, SQLITE_STATIC);
-        if (rc != SQLITE_OK)
-        {
-            cerr << "bind failed: " << sqlite3_errmsg(db) << endl;
-            sqlite3_free(err_msg);
+        size_t payload_size=cyp.aes_encryption_buffer_size(size);
+        size_t total_size = payload_size + sizeof(sDBImg);
+        sDBImg *newbuf=(sDBImg *)new unsigned char[total_size];
+        if (newbuf) {
+            newbuf->size=size;
+            newbuf->encrypted_size=payload_size;
+            cyp.encrypt_aes((unsigned char*)buffer, size, &newbuf->payload[0] );   
+            // memcpy( &newbuf->payload[0],(unsigned char*)buffer, size )    ;     
+            rc = sqlite3_bind_blob(stmt, 1, (unsigned char*)newbuf, total_size, SQLITE_STATIC);
+            if (rc != SQLITE_OK)
+            {
+                cerr << "bind failed: " << sqlite3_errmsg(db) << endl;
+                sqlite3_free(err_msg);
+            }
+            else
+            {
+                rc = sqlite3_step(stmt);
+                if (rc != SQLITE_DONE)
+                    cerr << "execution failed: " << sqlite3_errmsg(db) << endl;
+                sqlite3_free(err_msg);
+            }
+            delete newbuf;
         }
-        else
-        {
-            rc = sqlite3_step(stmt);
-            if (rc != SQLITE_DONE)
-                cerr << "execution failed: " << sqlite3_errmsg(db) << endl;
-            sqlite3_free(err_msg);
-        }
+
     }
     sqlite3_finalize(stmt);
     if (need_close)
@@ -293,6 +311,7 @@ CMydb::list_faces(vector<tFaceEntity> *facelist/*=nullptr*/)
     {
         sqlite3_stmt *stmt;
         int ret;
+        CCyper cyp;
         rc = sqlite3_exec(db, "BEGIN", 0, 0, 0);
         SQL_CHECK("Trassaction begin");
         char *sql = (char *)"SELECT * from faces INNER JOIN names on names.id==faces.names_id";
@@ -301,26 +320,33 @@ CMydb::list_faces(vector<tFaceEntity> *facelist/*=nullptr*/)
             while (sqlite3_step(stmt) == SQLITE_ROW)
             {
                 ssize_t leng = sqlite3_column_bytes(stmt, 2);
-                char *jpg = (char *)sqlite3_column_blob(stmt, 2);
+                sDBImg *dbimg=(sDBImg *)sqlite3_column_blob(stmt, 2);
                 // printf("id:%d  face_id:%d  name=%s leng=%zu\n",
                 //        sqlite3_column_int(stmt, 0),
                 //        sqlite3_column_int(stmt, 1),
                 //        sqlite3_column_text(stmt, 4),
                 //        leng);
-
-                if (facelist != nullptr) {
-                    tFaceEntity face;
-                    face.data=new unsigned char[leng];
-                    memcpy(face.data, jpg, leng);
-                    face.name=(const char*)sqlite3_column_text(stmt, 4);
-                    face.length=leng;
-                    facelist->push_back(face);
-                } else {
-                    cv::Mat image = cv::Mat(videoFrameHeight, videoFrameWidth, 16);
-                    image.data = (uchar *)jpg;
-                    cv::imshow("VideoSource", image);
-                    ret = cv::waitKey(100);
-                    printf("ret=%d\n", ret);
+                unsigned char *jpg=new unsigned char[dbimg->encrypted_size];
+                if (jpg) 
+                {
+                    string usr_name=cyp.decrypt_aes((const char*)sqlite3_column_text(stmt, 4));
+                    cyp.decrypt_aes(&dbimg->payload[0], dbimg->encrypted_size, jpg );
+                    // printf("JPG: name=%s  size=%zu  encrypted_size=%zu\n", usr_name.c_str(), dbimg->size, dbimg->encrypted_size);
+                    if (facelist != nullptr) {
+                        tFaceEntity face;
+                        face.data=jpg;
+                        face.length=dbimg->size;
+                        face.name=usr_name;
+                        facelist->push_back(face);
+                    } 
+                    else {
+                        // cv::Mat image = cv::Mat(videoFrameHeight, videoFrameWidth, 16);
+                        // image.data = jpg;
+                        // cv::imshow("VideoSource", image);
+                        // ret = cv::waitKey(100);
+                        // printf("ret=%d\n", ret);
+                        delete jpg;
+                    }
                 }
             }
         }
@@ -408,7 +434,7 @@ int CMydb::find_user(string id, string passwd)
         stringStream << "';";
         string strstr = stringStream.str();
         char *sql = (char *)strstr.c_str();
-        printf("SQL=%s\n", sql);
+        // printf("SQL=%s\n", sql);
         if (sqlite3_prepare(db, sql, -1, &stmt, nullptr) == SQLITE_OK)
         {
             if (sqlite3_step(stmt) == SQLITE_ROW)

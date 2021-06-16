@@ -22,12 +22,26 @@
 
 using namespace std::chrono;
 
+
+
+typedef struct {
+	string name;
+	int nshots;
+	CComm *pcom;
+	int n;
+	int replied_n;
+} AddUserData;
+
+
 /* prototypes */
+gboolean state_process_opmode(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase);
 gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase);
 gboolean thread_start(tServiceData *psbd);
 gboolean thread_stop(tServiceData *psbd);
 static gboolean on_handle_sigterm(gpointer pUserData);
 static gpointer main_thread(gpointer data);
+vector<struct Paths> get_video_files(string videopath);
+
 
 
 /* implementation */
@@ -107,7 +121,7 @@ gboolean state_process_opmode(tServiceData *psbd, CComm *pcom, CBaseProtocol *pb
 			if (pcom) pcom->send_packet(ack);
 			psbd->sstate=SS_RUN;
 		}
-		else if (ctl->msg.mode() == protocol_msg::ControlMode::LEARNING) {
+		else if (ctl->msg.mode() == protocol_msg::ControlMode::LEARNING && psbd->privilege==SP_ADMIN) {
 			psbd->pimgproc->set_enable_send(false);
 			psbd->pimgproc->stop();
 			sleep(1);
@@ -117,7 +131,7 @@ gboolean state_process_opmode(tServiceData *psbd, CComm *pcom, CBaseProtocol *pb
 			if (pcom) pcom->send_packet(ack);
 			psbd->sstate=SS_LEARN_START;
 		}
-		else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN) {
+		else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN  && psbd->privilege==SP_ADMIN) {
 			psbd->pimgproc->set_enable_send(false);
 			psbd->pimgproc->stop();
 			vector <string> filelist;
@@ -132,14 +146,6 @@ gboolean state_process_opmode(tServiceData *psbd, CComm *pcom, CBaseProtocol *pb
 	return true;
 }
 
-typedef struct {
-	string name;
-	int nshots;
-	CComm *pcom;
-	int n;
-	int replied_n;
-} AddUserData;
-
 gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase, AddUserData &adduser_data)
 {
 	static SystemState prev_sstate=SS_READY;
@@ -152,7 +158,7 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase, A
 	}
 	// milliseconds current_time = duration_cast< milliseconds >(system_clock::now().time_since_epoch() );		
 	// printf("current time=%l diff=%d\n", current_time, current_time - state_start_time);
-	printf("STATE=%d\n",psbd->sstate );
+	// printf("STATE=%d\n",psbd->sstate );
 	switch(psbd->sstate)
 	{
 	case SS_READY:
@@ -297,8 +303,6 @@ gboolean steate_machine(tServiceData *psbd, CComm *pcom, CBaseProtocol *pbase, A
 			}			
 		}	
 		break;
-	case SS_TESTRUN_DONE:
-		break;
 	}
 
 	if (pbase) {	
@@ -433,26 +437,6 @@ extern void print_pkt_header(const unsigned char* buff,int size) ;
 
 int main(int argc, char *argv[])
 {
-	// CCyper cyp;
-	// unsigned char a[50];
-	// unsigned char b[50];
-	// memset(a,0,50);
-	// memset(b,0,50);
-	// sprintf((char*)&a[0],"1234567890123456");
-	// cyp.encrypt_aes(a,strlen((char*)a), b);
-	// print_pkt_header(b,50);
-	// printf("len a=%zu\n",strlen((char*)a));
-	// printf("len b=%zu\n",strlen((char*)b));
-
-	// int len=strlen((char*)a)/16 * 16 + (strlen((char*)a) % 16 ? 16 :0 ); 
-	// printf("original len=%d  cal len=%d\n", strlen((char*)a), len );
-	// memset(a,0,50);
-	// cyp.decrypt_aes(b, 32, a);
-	// print_pkt_header(a,50);
-	// printf("a=%s\n", a);
-
-	// return 0;
-
 	tServiceData sbd;
 	sbd.sstate=SS_READY;
 	sbd.queue = g_async_queue_new();
