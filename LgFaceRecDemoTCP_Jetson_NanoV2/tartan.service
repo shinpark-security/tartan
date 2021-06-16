@@ -1,0 +1,19 @@
+# Copyright (C) 2021 LG Electronics Inc.
+
+[Unit]
+Description=Tartan Face Detection Service
+After=ssh.service
+
+[Service]
+Type=notify
+WorkingDirectory=/usr/local/tartan/bin
+ExecStart=/usr/local/tartan/bin/LgFaceRecDemoTCP_Jetson_NanoV2
+#ExecStop=/bin/kill -- $MAINPID
+#ExecReload=/bin/kill -1 --$MAINPID
+#
+RestartSec=5s
+WatchdogSec=10s
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

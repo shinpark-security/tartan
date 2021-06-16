@@ -16,8 +16,7 @@ lg - running, testrun mode possible
 
 
 #서버설치
-sudo apt-get install sqlite3 libsqlite3-dev libssl-dev 
-
+sudo apt-get install sqlite3 libsqlite3-dev libssl-dev libsystemd-dev
 ######## wolfssl
 mkdir work
 cd work

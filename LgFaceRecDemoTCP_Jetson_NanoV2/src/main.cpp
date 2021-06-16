@@ -19,6 +19,9 @@
 #include "ProtocolManager.h"
 #include "BaseProtocol.h"
 #include "MyProtocol.h"
+#include <sys/file.h>
+#include <errno.h>
+#include <systemd/sd-daemon.h>
 
 using namespace std::chrono;
 
@@ -45,6 +48,30 @@ vector<struct Paths> get_video_files(string videopath);
 
 
 /* implementation */
+static int sigletone_socket_fd=-1;
+gboolean port_check(uint16_t port)
+{
+    int rc=1;
+   
+	if ((sigletone_socket_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+	{
+		throw std::runtime_error(std::string("Could not create socket: ") +  strerror(errno));
+	}
+	else
+	{
+		struct sockaddr_in name;
+		name.sin_family = AF_INET;
+		name.sin_port = htons (port);
+		name.sin_addr.s_addr = htonl (INADDR_ANY);
+		rc = bind (sigletone_socket_fd, (struct sockaddr *) &name, sizeof (name));
+		if (rc < 0 )
+			return false;
+	}
+	return true;
+}	
+
+
+
 vector<struct Paths> get_video_files(string videopath)
 {
     std::vector<struct Paths> paths;
@@ -332,6 +359,10 @@ gpointer main_thread(gpointer data)
 	tServiceData *psbd = (tServiceData *)data;
 	static AddUserData adduser_data;
 
+	if (sigletone_socket_fd != -1) 
+		close(sigletone_socket_fd);
+	sigletone_socket_fd=-1;
+		
 	psbd->pcom->start();
 	psbd->pcom_tls->start();
 	// psbd->pimgproc->start();
@@ -394,6 +425,7 @@ gpointer main_thread(gpointer data)
 			}
 		}
 		steate_machine(psbd, pcom, pbase, adduser_data);
+		sd_notify(0,"WATCHDOG=1");
 
 		if (pbase) delete pbase;
 		if (pmsg) delete pmsg;
@@ -437,12 +469,19 @@ extern void print_pkt_header(const unsigned char* buff,int size) ;
 
 int main(int argc, char *argv[])
 {
+	if (!port_check(55555))
+	{
+		cerr << "process running already.  port:55555 " << endl;
+		exit(1);
+	}
+
 	tServiceData sbd;
 	sbd.sstate=SS_READY;
 	sbd.queue = g_async_queue_new();
 
 	CMydb db; //just once
 	db.start();
+
 
 	sbd.pcom = new CComm(false, TCP_PORT_NON_SECURE, sbd.queue);
 	if (sbd.pcom==nullptr) return 1;
