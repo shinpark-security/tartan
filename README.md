@@ -51,6 +51,15 @@ cd ~/work/tartan/LgFaceRecDemoTCP_Jetson_NanoV2
 sudo tartan_install.sh
 
 
+
+# CLIENT APP
+
+github :
+
+https://github.com/azzzzzzzzzzzzzzzzzzzzzzzzzzzzz/LGSecurity/
+
+
+
 # Contact
 
 Please register as an issue on this github where you find bugs or vulnerabilities in this program.  
