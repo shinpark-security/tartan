@@ -158,7 +158,7 @@ gboolean state_process_opmode(tServiceData *psbd, CComm *pcom, CBaseProtocol *pb
 			if (pcom) pcom->send_packet(ack);
 			psbd->sstate=SS_LEARN_START;
 		}
-		else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN  && psbd->privilege==SP_ADMIN) {
+		else if (ctl->msg.mode() == protocol_msg::ControlMode::TESTRUN ) {
 			psbd->pimgproc->set_enable_send(false);
 			psbd->pimgproc->stop();
 			vector <string> filelist;
@@ -383,7 +383,7 @@ gpointer main_thread(gpointer data)
 			switch (pmsg->msgid)
 			{
 			case MYMSG_FRAME:
-				printf(".");
+				// printf(".");
 				if (psbd->pcom->thread_run)
 					psbd->pcom->send_jpg(pmsg->mat);
 				if (psbd->pcom_tls->thread_run)
@@ -426,6 +426,7 @@ gpointer main_thread(gpointer data)
 		}
 		steate_machine(psbd, pcom, pbase, adduser_data);
 		sd_notify(0,"WATCHDOG=1");
+		// printf("Kick...\n");
 
 		if (pbase) delete pbase;
 		if (pmsg) delete pmsg;
@@ -441,7 +442,7 @@ gpointer main_thread(gpointer data)
 gboolean thread_stop(tServiceData *psbd)
 {
 	gboolean ret = false;
-	printf("thread_stop()+\n");
+	// printf("thread_stop()+\n");
 
 	if (psbd != nullptr)
 	{
@@ -469,15 +470,17 @@ extern void print_pkt_header(const unsigned char* buff,int size) ;
 
 int main(int argc, char *argv[])
 {
-	if (!port_check(55555))
-	{
-		cerr << "process running already.  port:55555 " << endl;
-		exit(1);
-	}
+	// if (!port_check(55555))
+	// {
+	// 	cerr << "process running already.  port:55555 " << endl;
+	// 	exit(1);
+	// }
 
 	tServiceData sbd;
 	sbd.sstate=SS_READY;
 	sbd.queue = g_async_queue_new();
+	
+	sd_notify (0, "READY=1");
 
 	CMydb db; //just once
 	db.start();

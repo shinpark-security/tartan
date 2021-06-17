@@ -1,4 +1,5 @@
 # Copyright (C) 2021 LG Electronics Inc.
+# TEAM1 - shinpark-oneTeam
 
 [Unit]
 Description=Tartan Face Detection Service
@@ -6,11 +7,10 @@ After=ssh.service
 
 [Service]
 Type=notify
+NotifyAccess=all
 WorkingDirectory=/usr/local/tartan/bin
 ExecStart=/usr/local/tartan/bin/LgFaceRecDemoTCP_Jetson_NanoV2
-#ExecStop=/bin/kill -- $MAINPID
-#ExecReload=/bin/kill -1 --$MAINPID
-#
+ExecReload=/bin/systemctl restart nvargus-daemon
 RestartSec=5s
 WatchdogSec=10s
 Restart=on-failure
