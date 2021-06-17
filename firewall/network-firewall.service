@@ -1,0 +1,13 @@
+[Unit]
+Description=Network Firewall
+Before=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/network-firewall start
+ExecStop=/usr/bin/network-firewall stop
+
+[Install]
+WantedBy=multi-user.target

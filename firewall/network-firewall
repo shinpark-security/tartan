@@ -1,0 +1,73 @@
+#!/bin/bash
+PATH=/sbin:/usr/sbin/:/bin:/usr/bin
+
+IP4TABLES_RESTORE="/sbin/iptables-restore"
+IP6TABLES_RESTORE="/sbin/ip6tables-restore"
+DEFAULT_RULE="/var/shinpark/rule.conf"
+NOFLUSH="-n"
+
+noflush() {
+    FLUSH_RULE="*filter\n:INPUT ACCEPT\n:OUTPUT ACCEPT\n:FORWARD ACCEPT\nCOMMIT"
+    echo -n "Flush network firewall rules ... "
+    echo -e "$FLUSH_RULE" | "$IP4TABLES_RESTORE" "$NOFLUSH" 2>> /dev/null &&
+    echo -e "$FLUSH_RULE" | "$IP6TABLES_RESTORE" "$NOFLUSH" 2>> /dev/null
+    if [ $? -ne 0 ]; then
+        echo -n "FAIL"
+        echo ""
+        return 3
+    fi
+    echo -n "SUCCESS"
+    echo ""
+}
+
+flush() {
+    FLUSH_RULE="*filter\n:INPUT ACCEPT\n:OUTPUT ACCEPT\n:FORWARD ACCEPT\nCOMMIT"
+    echo -n "Flush network firewall rules ... "
+    echo -e "$FLUSH_RULE" | "$IP4TABLES_RESTORE" 2>> /dev/null &&
+    echo -e "$FLUSH_RULE" | "$IP6TABLES_RESTORE" 2>> /dev/null
+    if [ $? -ne 0 ]; then
+        echo -n "FAIL"
+        echo ""
+        return 3
+    fi
+    echo -n "SUCCESS"
+    echo ""
+}
+
+load() {
+    echo -n "Load network firewall rules ... "
+    if [ -e $1 ]; then
+        echo ""
+        echo -n "$1 ... "
+        $IP4TABLES_RESTORE $2 < "$1" 2>> /dev/null &&
+        $IP6TABLES_RESTORE $2 < "$1" 2>> /dev/null
+        if [ $? -ne 0 ]; then
+            echo -n "FAIL"
+            echo ""
+            return 3
+        else
+            echo -n "SUCCESS"
+            echo ""
+        fi
+    else
+        echo -n "FAIL"
+        echo ""
+        return 3
+    fi
+}
+
+case "$1" in
+    start)
+        load $DEFAULT_RULE
+    ;;
+    stop)
+        flush
+    ;;
+    restart)
+        load $DEFAULT_RULE
+    ;;
+    *)
+        echo "Usage: $0 start|stop|restart" >&2
+        exit 3
+    ;;
+esac
