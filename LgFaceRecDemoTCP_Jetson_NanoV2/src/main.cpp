@@ -22,6 +22,8 @@
 #include <sys/file.h>
 #include <errno.h>
 #include <systemd/sd-daemon.h>
+#include <spawn.h>
+
 
 using namespace std::chrono;
 
@@ -44,6 +46,7 @@ gboolean thread_stop(tServiceData *psbd);
 static gboolean on_handle_sigterm(gpointer pUserData);
 static gpointer main_thread(gpointer data);
 vector<struct Paths> get_video_files(string videopath);
+void run_cmd(char *cmd);
 
 
 
@@ -466,6 +469,31 @@ gboolean thread_stop(tServiceData *psbd)
 	return ret;
 }
 
+void run_cmd(char *cmd)
+{
+    pid_t pid;
+    int status=0;
+    char *argv[] = {(char*)"sh", (char*)"-c", cmd, NULL};
+
+    printf("run cmd : %s\n", cmd);
+    status = posix_spawn(&pid, (char*)"/bin/sh", NULL, NULL, argv, NULL);
+    if (status == 0)
+    {
+        if (waitpid(pid, &status, 0) != -1)
+        {
+            printf("Child exited with status %i\n", status);
+        }
+        else
+        {
+            perror("waitpid");
+        }
+    }
+    else
+    {
+        printf("posix_spawn: %s\n", strerror(status));
+    }
+}
+
 extern void print_pkt_header(const unsigned char* buff,int size) ;
 
 int main(int argc, char *argv[])
@@ -480,7 +508,10 @@ int main(int argc, char *argv[])
 	sbd.sstate=SS_READY;
 	sbd.queue = g_async_queue_new();
 	
+
 	sd_notify (0, "READY=1");
+
+	run_cmd("/bin/systemctl restart nvargus-daemon");
 
 	CMydb db; //just once
 	db.start();
