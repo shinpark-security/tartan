@@ -16,33 +16,45 @@ lg - running, testrun mode possible
 
 
 
-#---------------------------------------------------------------------------
 # Build Environment
 $ sudo apt-get install sqlite3 libsqlite3-dev libssl-dev libsystemd-dev
 
 
 # wolfssl Installation
-mkdir work
-cd work
-git clone https://github.com/wolfSSL/wolfssl.git
-cd wolfssl
-./autogen.sh
-./configure --enable-keygen --enable-rsa --enable-ecc --enable-ed25519 --enable-des3 CFLAGS="-DWOLFSSL_PUBLIC_MP" --enable-all
+$ mkdir ~/work
+
+$ cd ~/work
+
+$ git clone https://github.com/wolfSSL/wolfssl.git
+
+$ cd wolfssl
+
+$ ./autogen.sh
+
+$ ./configure --enable-keygen --enable-rsa --enable-ecc --enable-ed25519 --enable-des3 CFLAGS="-DWOLFSSL_PUBLIC_MP" --enable-all
+
 
 # PROTOBUF Installation
 Source download : https://developers.google.com/protocol-buffers/docs/downloads
 
 $ tar xvf protobuf-all-3.17.3.tar.gz
+
 $ cd protobuf-all-3.17.3
 
 $ ./configure
+
 $ make 
+
 $ sudo make install
+
 $ sudo ldconfig
 
 
+
 # Server Installation and Run
+
 cd ~/work/tartan/LgFaceRecDemoTCP_Jetson_NanoV2
+
 sudo tartan_install.sh
 
 
