@@ -46,9 +46,17 @@ $ sudo ldconfig
 
 # Server Installation and Run
 
-cd ~/work/tartan/LgFaceRecDemoTCP_Jetson_NanoV2
+$ cd ~/work/tartan/LgFaceRecDemoTCP_Jetson_NanoV2
 
-sudo tartan_install.sh
+$ sudo tartan_install.sh
+
+$ cd ~/work/tartan/firewall
+
+$ sudo ./install.sh
+
+$ sudo sync
+
+$ sudo reboot
 
 
 
