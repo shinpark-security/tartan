@@ -8,6 +8,8 @@ cp facenetModels /usr/local/tartan/ -rf
 cp facenet.pb /usr/local/tartan/
 cp shinpark /var/ -rf
 cp tartan.service /lib/systemd/system/
+cp log.sh   /usr/local/tartan/
+cp restart_server.sh  /usr/local/tartan/
 sudo systemctl enable tartan 
 sudo systemctl start tartan 
 
