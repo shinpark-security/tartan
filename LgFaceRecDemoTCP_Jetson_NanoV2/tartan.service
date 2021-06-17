@@ -12,7 +12,7 @@ WorkingDirectory=/usr/local/tartan/bin
 ExecStart=/usr/local/tartan/bin/LgFaceRecDemoTCP_Jetson_NanoV2
 ExecReload=/bin/systemctl restart nvargus-daemon
 RestartSec=5s
-WatchdogSec=10s
+WatchdogSec=20s
 Restart=on-failure
 
 [Install]
