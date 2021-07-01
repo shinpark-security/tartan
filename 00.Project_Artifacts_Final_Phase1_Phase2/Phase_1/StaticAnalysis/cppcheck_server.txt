@@ -1,0 +1,339 @@
+Checking Common/KeyboardSetup.cpp ...
+1/49 files checked 2% done
+Checking Common/NetworkManager.cpp ...
+[Common/NetworkManager.cpp:88]: (style) Consecutive return, break, continue, goto or throw statements are unnecessary.
+[Common/NetworkManager.h:12]: (style) class 'NetworkManager' does not have a copy constructor which is recommended since the class contains a pointer to allocated memory.
+[Common/NetworkManager.cpp:41]: (performance) Function parameter 'id' should be passed by reference.
+[Common/NetworkManager.cpp:41]: (performance) Function parameter 'pw' should be passed by reference.
+[Common/NetworkManager.cpp:74]: (performance) Function parameter 'id' should be passed by reference.
+[Common/NetworkManager.cpp:91]: (performance) Function parameter 'id' should be passed by reference.
+Checking Common/NetworkManager.cpp: _WIN32;_WIN64...
+2/49 files checked 4% done
+Checking Common/NetworkTCP.cpp ...
+[Common/NetworkTCP.cpp:544]: (portability) %zu in format string (no. 2) requires 'size_t' but the argument type is 'ssize_t {aka signed long}'.
+[Common/NetworkTCP.cpp:561]: (portability) %zu in format string (no. 1) requires 'size_t' but the argument type is 'ssize_t {aka signed long}'.
+[Common/NetworkTCP.cpp:584]: (portability) %zu in format string (no. 2) requires 'size_t' but the argument type is 'ssize_t {aka signed long}'.
+[Common/NetworkTCP.cpp:601]: (portability) %zu in format string (no. 1) requires 'size_t' but the argument type is 'ssize_t {aka signed long}'.
+[Common/NetworkTCP.cpp:616]: (style) The scope of the variable 'bytes_written' can be reduced.
+[Common/NetworkTCP.cpp:633]: (style) The scope of the variable 'bytes_written' can be reduced.
+Checking Common/NetworkTCP.cpp: _WIN32;_WIN64...
+3/49 files checked 6% done
+Checking Common/NetworkUDP.cpp ...
+Checking Common/NetworkUDP.cpp: _WIN32;_WIN64...
+4/49 files checked 8% done
+Checking Common/Protocol/BaseProtocol.cpp ...
+5/49 files checked 10% done
+Checking Common/Protocol/MyProtocol.cpp ...
+[Common/Protocol/MyProtocol.h:46]: (style) Class 'CControlModeProtocol' has a constructor with 1 argument that is not explicit.
+[Common/Protocol/MyProtocol.h:58]: (style) Class 'CServerSettingProtocol' has a constructor with 1 argument that is not explicit.
+[Common/Protocol/MyProtocol.h:70]: (style) Class 'CVideoFileListProtocol' has a constructor with 1 argument that is not explicit.
+[Common/Protocol/MyProtocol.h:82]: (style) Class 'CTestMode_PlayVideoProtocol' has a constructor with 1 argument that is not explicit.
+[Common/Protocol/MyProtocol.cpp:12]: (performance) Function parameter 'id' should be passed by reference.
+[Common/Protocol/MyProtocol.cpp:12]: (performance) Function parameter 'pw' should be passed by reference.
+[Common/Protocol/MyProtocol.cpp:18]: (performance) Function parameter 'id' should be passed by reference.
+[Common/Protocol/MyProtocol.cpp:22]: (performance) Function parameter 'password' should be passed by reference.
+6/49 files checked 12% done
+Checking Common/Protocol/ProtocolManager.cpp ...
+[Common/Protocol/ProtocolManager.cpp:60]: (warning) %d in format string (no. 1) requires 'int' but the argument type is 'unsigned int'.
+[Common/Protocol/ProtocolManager.cpp:61]: (portability) %zd in format string (no. 1) requires 'ssize_t' but the argument type is 'size_t {aka unsigned long}'.
+[Common/Protocol/ProtocolManager.cpp:70]: (warning) %d in format string (no. 1) requires 'int' but the argument type is 'unsigned int'.
+[Common/Protocol/ProtocolManager.cpp:73]: (warning) %d in format string (no. 1) requires 'int' but the argument type is 'unsigned int'.
+[Common/Protocol/ProtocolManager.cpp:74]: (warning) %d in format string (no. 1) requires 'int' but the argument type is 'unsigned int'.
+[Common/Protocol/MyProtocol.h:18]: (performance) Function parameter 'id' should be passed by reference.
+[Common/Protocol/MyProtocol.h:18]: (performance) Function parameter 'pw' should be passed by reference.
+[Common/Protocol/MyProtocol.h:19]: (performance) Function parameter 'id' should be passed by reference.
+[Common/Protocol/MyProtocol.h:20]: (performance) Function parameter 'password' should be passed by reference.
+7/49 files checked 14% done
+Checking Common/SG_InputBox.cpp ...
+8/49 files checked 16% done
+Checking Common/TcpSendRecvJpeg.cpp ...
+[Common/TcpSendRecvJpeg.cpp:83]: (style) Checking if unsigned variable 'imagesize' is less than zero.
+[Common/TcpSendRecvJpeg.cpp:107]: (style) Checking if unsigned variable 'imagesize' is less than zero.
+Checking Common/TcpSendRecvJpeg.cpp: _WIN32;_WIN64...
+9/49 files checked 18% done
+Checking Common/UdpSendRecvJpeg.cpp ...
+Checking Common/UdpSendRecvJpeg.cpp: _WIN32;_WIN64...
+10/49 files checked 20% done
+Checking Common/utils.cpp ...
+11/49 files checked 22% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/baseEngine.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/baseEngine.cpp:6]: (warning) Member variable 'baseEngine::context' is not initialized in the constructor.
+12/49 files checked 24% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/common.cpp ...
+13/49 files checked 26% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/demo.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/demo.cpp:17]: (style) The scope of the variable 'start' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/rnet_rt.h:24]: (style) Class 'Rnet' has a constructor with 1 argument that is not explicit.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/onet_rt.h:23]: (style) Class 'Onet' has a constructor with 1 argument that is not explicit.
+14/49 files checked 28% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/mtcnn.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/mtcnn.cpp:68]: (style) Variable 'first_time' is assigned a value that is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/mtcnn.cpp:72]: (style) Variable 'run_first_time' is assigned a value that is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/mtcnn.cpp:135]: (style) Variable 'third_time' is assigned a value that is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/mtcnn.h:7]: (style) class 'mtcnn' does not have a copy constructor which is recommended since the class contains a pointer to allocated memory.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/mtcnn.cpp:25]: (performance) Prefer prefix ++/-- operators for non-primitive types.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/mtcnn.cpp:82]: (performance) Prefer prefix ++/-- operators for non-primitive types.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/mtcnn.cpp:105]: (performance) Prefer prefix ++/-- operators for non-primitive types.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/mtcnn.cpp:136]: (performance) Prefer prefix ++/-- operators for non-primitive types.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/mtcnn.cpp:173]: (performance) Prefer prefix ++/-- operators for non-primitive types.
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/mtcnn.cpp: LOG...
+15/49 files checked 30% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/network.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/network.cpp:34]: (style) The scope of the variable 'order' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/network.cpp:66]: (performance) Prefer prefix ++/-- operators for non-primitive types.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/network.cpp:87]: (performance) Prefer prefix ++/-- operators for non-primitive types.
+16/49 files checked 32% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/onet_rt.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/onet_rt.h:21]: (style) class 'Onet' does not have a copy constructor which is recommended since the class contains a pointer to allocated memory.
+17/49 files checked 34% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/pnet_rt.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/pnet_rt.h:28]: (style) class 'Pnet' does not have a copy constructor which is recommended since the class contains a pointer to allocated memory.
+18/49 files checked 36% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/rnet_rt.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/rnet_rt.h:22]: (style) class 'Rnet' does not have a copy constructor which is recommended since the class contains a pointer to allocated memory.
+19/49 files checked 38% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdC/CMakeCCompilerId.c ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdC/CMakeCCompilerId.c]: (information) Too many #ifdef configurations - cppcheck only checks 12 of 94 configurations. Use --force to check all configurations.
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdC/CMakeCCompilerId.c: MPRAS;_MPRAS...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdC/CMakeCCompilerId.c: SCO_SV;_SCO_SV;sco_sv...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdC/CMakeCCompilerId.c: SDCC;__SDCC_VERSION_MAJOR...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdC/CMakeCCompilerId.c: SDCC;__SDCC_VERSION_MAJOR;__SDCC_VERSION_MAJOR...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdC/CMakeCCompilerId.c: SIMULATE_VERSION_PATCH...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdC/CMakeCCompilerId.c: SIMULATE_VERSION_PATCH;SIMULATE_VERSION_TWEAK...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdC/CMakeCCompilerId.c: WIN32;_WIN32;__WIN32__...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdC/CMakeCCompilerId.c: XENIX;_XENIX;__XENIX__...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdC/CMakeCCompilerId.c: _AIX;__AIX;__AIX__;__aix;__aix__...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdC/CMakeCCompilerId.c: _BEOS;__BEOS__;__BeOS...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdC/CMakeCCompilerId.c: _COMPILER_VERSION;_SGI_COMPILER_VERSION...
+20/49 files checked 40% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdCXX/CMakeCXXCompilerId.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdCXX/CMakeCXXCompilerId.cpp]: (information) Too many #ifdef configurations - cppcheck only checks 12 of 89 configurations. Use --force to check all configurations.
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdCXX/CMakeCXXCompilerId.cpp: MPRAS;_MPRAS...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdCXX/CMakeCXXCompilerId.cpp: SCO_SV;_SCO_SV;sco_sv...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdCXX/CMakeCXXCompilerId.cpp: SIMULATE_VERSION_PATCH...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdCXX/CMakeCXXCompilerId.cpp: SIMULATE_VERSION_PATCH;SIMULATE_VERSION_TWEAK...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdCXX/CMakeCXXCompilerId.cpp: WIN32;_WIN32;__WIN32__...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdCXX/CMakeCXXCompilerId.cpp: XENIX;_XENIX;__XENIX__...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdCXX/CMakeCXXCompilerId.cpp: _AIX;__AIX;__AIX__;__aix;__aix__...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdCXX/CMakeCXXCompilerId.cpp: _BEOS;__BEOS__;__BeOS...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdCXX/CMakeCXXCompilerId.cpp: _COMPILER_VERSION;_SGI_COMPILER_VERSION...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdCXX/CMakeCXXCompilerId.cpp: _COMPILER_VERSION;_SGI_COMPILER_VERSION;_SGI_COMPILER_VERSION...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/3.10.2/CompilerIdCXX/CMakeCXXCompilerId.cpp: _CRAYC...
+21/49 files checked 42% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/feature_tests.c ...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/feature_tests.c: __STDC_VERSION__...
+22/49 files checked 44% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/feature_tests.cxx ...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/build/CMakeFiles/feature_tests.cxx: __GXX_EXPERIMENTAL_CXX0X__...
+23/49 files checked 46% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/NetworkTCP.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/NetworkTCP.cpp:548]: (portability) %zu in format string (no. 2) requires 'size_t' but the argument type is 'ssize_t {aka signed long}'.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/NetworkTCP.cpp:565]: (portability) %zu in format string (no. 1) requires 'size_t' but the argument type is 'ssize_t {aka signed long}'.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/NetworkTCP.cpp:588]: (portability) %zu in format string (no. 2) requires 'size_t' but the argument type is 'ssize_t {aka signed long}'.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/NetworkTCP.cpp:605]: (portability) %zu in format string (no. 1) requires 'size_t' but the argument type is 'ssize_t {aka signed long}'.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/NetworkTCP.cpp:620]: (style) The scope of the variable 'bytes_written' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/NetworkTCP.cpp:637]: (style) The scope of the variable 'bytes_written' can be reduced.
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/NetworkTCP.cpp: _WIN32;_WIN64...
+24/49 files checked 48% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/NetworkUDP.cpp ...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/NetworkUDP.cpp: _WIN32;_WIN64...
+25/49 files checked 51% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/TcpSendRecvJpeg.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/TcpSendRecvJpeg.cpp:73]: (style) Checking if unsigned variable 'imagesize' is less than zero.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/TcpSendRecvJpeg.cpp:98]: (style) Checking if unsigned variable 'imagesize' is less than zero.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/TcpSendRecvJpeg.cpp:25]: (style) Unused variable: imagesize
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/TcpSendRecvJpeg.cpp:41]: (style) Unused variable: imagesize
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/TcpSendRecvJpeg.cpp: _WIN32;_WIN64...
+26/49 files checked 53% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/UdpSendRecvJpeg.cpp ...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/UdpSendRecvJpeg.cpp: _WIN32;_WIN64...
+27/49 files checked 55% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/auth.cpp ...
+28/49 files checked 57% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/baseEngine.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/baseEngine.cpp:9]: (warning) Member variable 'baseEngine::context' is not initialized in the constructor.
+29/49 files checked 59% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/comm.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/comm.cpp:234]: (style) C-style pointer casting
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/comm.cpp:140]: (style) The scope of the variable 'sents' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/comm.cpp:190]: (style) The scope of the variable 'sents' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/comm.cpp:294]: (style) The scope of the variable 'ret' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/comm.cpp:8]: (warning) Member variable 'CComm::TcpListenPort' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/comm.cpp:8]: (warning) Member variable 'CComm::thread' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/comm.cpp:363]: (error) Mismatching allocation and deallocation: buffer
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/comm.cpp: _WIN32;_WIN64...
+30/49 files checked 61% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/common.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/common.cpp:50]: (style) The scope of the variable 'entry' can be reduced.
+31/49 files checked 63% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/cyper.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/cyper.cpp:34]: (style) Clarify calculation precedence for '%' and '?'.
+32/49 files checked 65% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:213]: (style) The scope of the variable 'currDistance' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:216]: (style) Label 'std' is not used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:5]: (warning) Member variable 'FaceNetClassifier::m_output' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:14]: (performance) Variable 'm_gLogger' is assigned in constructor body. Consider performing initialization in initialization list.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:16]: (performance) Variable 'm_uffFile' is assigned in constructor body. Consider performing initialization in initialization list.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:17]: (performance) Variable 'm_engineFile' is assigned in constructor body. Consider performing initialization in initialization list.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:6]: (performance) Function parameter 'uffFile' should be passed by reference.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:6]: (performance) Function parameter 'engineFile' should be passed by reference.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:181]: (performance) Function parameter 'outputBbox' should be passed by reference.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:182]: (performance) Function parameter 'className' should be passed by reference.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:199]: (performance) Function parameter 'outputBbox' should be passed by reference.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:253]: (performance) Function parameter 'outputBbox' should be passed by reference.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:266]: (performance) Function parameter 'outputBbox' should be passed by reference.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:108]: (performance) Prefer prefix ++/-- operators for non-primitive types.
+33/49 files checked 67% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:71]: (style) C-style pointer casting
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:79]: (style) C-style pointer casting
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:172]: (style) C-style pointer casting
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:242]: (style) C-style pointer casting
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:252]: (style) C-style pointer casting
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:253]: (style) C-style pointer casting
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:313]: (style) The scope of the variable 'learning_cnt' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:79]: (style) Variable 'pfd' is assigned a value that is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:39]: (warning) Member variable 'CImgProc::thread' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:53]: (warning) Member variable 'CImgProc::thread' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:48]: (performance) Variable 'camera_dev' is assigned in constructor body. Consider performing initialization in initialization list.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:62]: (performance) Variable 'camera_dev' is assigned in constructor body. Consider performing initialization in initialization list.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/rnet_rt.h:24]: (style) Class 'Rnet' has a constructor with 1 argument that is not explicit.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/onet_rt.h:23]: (style) Class 'Onet' has a constructor with 1 argument that is not explicit.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.h:35]: (style) Class 'CImgProc' has a constructor with 1 argument that is not explicit.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.h:35]: (performance) Function parameter 'uffFile' should be passed by reference.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.h:35]: (performance) Function parameter 'engineFile' should be passed by reference.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.h:43]: (performance) Function parameter 'className' should be passed by reference.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:53]: (performance) Function parameter 'dev' should be passed by reference.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:152]: (performance) Function parameter 'name' should be passed by reference.
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp: LOG_TIMES...
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp: _WIN32;_WIN64...
+34/49 files checked 69% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/main.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/main.cpp:359]: (style) C-style pointer casting
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/main.cpp:39]: (style) The scope of the variable 'entry' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.h:45]: (performance) Function parameter 'name' should be passed by reference.
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/main.cpp: _WIN32;_WIN64...
+35/49 files checked 71% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/mtcnn.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mtcnn.cpp:79]: (style) Variable 'first_time' is assigned a value that is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mtcnn.cpp:83]: (style) Variable 'run_first_time' is assigned a value that is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mtcnn.cpp:147]: (style) Variable 'third_time' is assigned a value that is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mtcnn.h:7]: (style) class 'mtcnn' does not have a copy constructor which is recommended since the class contains a pointer to allocated memory.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mtcnn.cpp:25]: (performance) Prefer prefix ++/-- operators for non-primitive types.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mtcnn.cpp:93]: (performance) Prefer prefix ++/-- operators for non-primitive types.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mtcnn.cpp:117]: (performance) Prefer prefix ++/-- operators for non-primitive types.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mtcnn.cpp:148]: (performance) Prefer prefix ++/-- operators for non-primitive types.
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/mtcnn.cpp: LOG...
+36/49 files checked 73% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:266]: (portability) %zu in format string (no. 2) requires 'size_t' but the argument type is 'ssize_t {aka signed long}'.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:280]: (style) The scope of the variable 'err_msg' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:281]: (style) The scope of the variable 'videoFrameWidth' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:282]: (style) The scope of the variable 'videoFrameHeight' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:295]: (style) The scope of the variable 'ret' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:344]: (style) The scope of the variable 'err_msg' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:388]: (style) The scope of the variable 'err_msg' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:106]: (style) Unused variable: ret
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:223]: (style) Unused variable: ret
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:34]: (warning) Member variable 'CMydb::db' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:37]: (performance) Variable 'user_db_filename' is assigned in constructor body. Consider performing initialization in initialization list.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:38]: (performance) Variable 'faces_db_filename' is assigned in constructor body. Consider performing initialization in initialization list.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:128]: (performance) Function parameter 'name' should be passed by reference.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:384]: (performance) Function parameter 'id' should be passed by reference.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/mydb.cpp:384]: (performance) Function parameter 'passwd' should be passed by reference.
+37/49 files checked 75% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/network.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/network.cpp:34]: (style) The scope of the variable 'order' can be reduced.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/network.cpp:66]: (performance) Prefer prefix ++/-- operators for non-primitive types.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/network.cpp:87]: (performance) Prefer prefix ++/-- operators for non-primitive types.
+38/49 files checked 77% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/onet_rt.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/onet_rt.h:21]: (style) class 'Onet' does not have a copy constructor which is recommended since the class contains a pointer to allocated memory.
+39/49 files checked 79% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/pnet_rt.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/pnet_rt.h:28]: (style) class 'Pnet' does not have a copy constructor which is recommended since the class contains a pointer to allocated memory.
+40/49 files checked 81% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/rnet_rt.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/rnet_rt.h:22]: (style) class 'Rnet' does not have a copy constructor which is recommended since the class contains a pointer to allocated memory.
+41/49 files checked 83% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/src/videoStreamer.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/videoStreamer.cpp:31]: (warning) Member variable 'VideoStreamer::m_videoWidth' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/videoStreamer.cpp:31]: (warning) Member variable 'VideoStreamer::m_videoHeight' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/videoStreamer.cpp:31]: (warning) Member variable 'VideoStreamer::m_frameRate' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/videoStreamer.h:11]: (style) class 'VideoStreamer' does not have a copy constructor which is recommended since the class contains a pointer to allocated memory.
+42/49 files checked 85% done
+Checking LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp ...
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.h:128]: (portability) Casting between integer* and const float* which have an incompatible binary data representation.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:19]: (warning) Member variable 'L2NormHelper::C' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:19]: (warning) Member variable 'L2NormHelper::H' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:19]: (warning) Member variable 'L2NormHelper::W' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:19]: (warning) Member variable 'L2NormHelper::mPluginNamespace' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:21]: (warning) Member variable 'L2NormHelper::mPluginNamespace' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:24]: (warning) Member variable 'L2NormHelper::mPluginNamespace' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:144]: (warning) Member variable 'L2NormHelperPluginCreator::mOpType' is not initialized in the constructor.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:144]: (warning) Member variable 'L2NormHelperPluginCreator::mEps' is not initialized in the constructor.
+43/49 files checked 87% done
+Checking LoginProto/Login.cpp ...
+[LoginProto/Login.cpp:100]: (warning) %d in format string (no. 1) requires 'int' but the argument type is 'unsigned int'.
+[LoginProto/Login.cpp:44]: (style) Unused variable: key
+44/49 files checked 89% done
+Checking RecvImageTCP/RecvImageTCP.cpp ...
+[RecvImageTCP/RecvImageTCP.cpp:88]: (portability) %zd in format string (no. 1) requires 'ssize_t' but the argument type is 'size_t {aka unsigned long}'.
+[RecvImageTCP/RecvImageTCP.cpp:149]: (style) Consecutive return, break, continue, goto or throw statements are unnecessary.
+45/49 files checked 91% done
+Checking RecvImageUDP/RecvImageUDP.cpp ...
+[RecvImageUDP/RecvImageUDP.cpp:33]: (style) The scope of the variable 'retvalue' can be reduced.
+46/49 files checked 93% done
+Checking SendImageTCP/SendImageTCP.cpp ...
+47/49 files checked 95% done
+Checking SendImageTcpOverProto/SendImageTCP.cpp ...
+48/49 files checked 97% done
+Checking SendImageUDP/SendImageUDP.cpp ...
+49/49 files checked 100% done
+[Common/KeyboardSetup.cpp:24]: (style) The function 'ConfigKeyboardNoEnterBlockEcho' is never used.
+[Common/NetworkUDP.cpp:149]: (style) The function 'DeleteUdpDest' is never used.
+[Common/SG_InputBox.cpp:170]: (style) The function 'GetString' is never used.
+[Common/KeyboardSetup.cpp:54]: (style) The function 'RestoreKeyboard' is never used.
+[Common/TcpSendRecvJpeg.cpp:98]: (style) The function 'TcpRecvImageAsJpeg' is never used.
+[Common/TcpSendRecvJpeg.cpp:74]: (style) The function 'TcpRecvImageAsJpegTLS' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:253]: (style) The function 'addNewFace' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/videoStreamer.cpp:55]: (style) The function 'assertResolution' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/common.cpp:22]: (style) The function 'calculateBindingBufferSizes' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:99]: (style) The function 'configureWithFormat' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:178]: (style) The function 'createPlugin' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/cyper.cpp:38]: (style) The function 'decrypt_aes' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:200]: (style) The function 'deserializePlugin' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/faceNet.cpp:305]: (style) The function 'elementSize' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/cyper.cpp:28]: (style) The function 'encrypt_aes' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:173]: (style) The function 'getFieldNames' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:36]: (style) The function 'getNbOutputs' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:42]: (style) The function 'getOutputDimensions' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:153]: (style) The function 'getPluginName' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:93]: (style) The function 'getPluginNamespace' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:117]: (style) The function 'getPluginType' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:122]: (style) The function 'getPluginVersion' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:57]: (style) The function 'getWorkspaceSize' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:135]: (style) The function 'getch' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/demo.cpp:31]: (style) The function 'image_test' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:50]: (style) The function 'initialize' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/imgproc.cpp:125]: (style) The function 'kbhit' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/common.cpp:6]: (style) The function 'locateFile' is never used.
+[Common/NetworkManager.cpp:28]: (style) The function 'openTcpConnection' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/comm.cpp:92]: (style) The function 'pause' is never used.
+[Common/NetworkTCP.cpp:519]: (style) The function 'print_pkt_header' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/MTCNN_FaceDetection_TensorRT/src/common.cpp:29]: (style) The function 'readPGMFile' is never used.
+[Common/NetworkManager.cpp:108]: (style) The function 'readRecvImage' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/comm.cpp:107]: (style) The function 'resume' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/common.cpp:8]: (style) The function 'safeCudaMalloc' is never used.
+[Common/NetworkManager.cpp:91]: (style) The function 'sendImageToClient' is never used.
+[Common/NetworkManager.cpp:52]: (style) The function 'sendRequestImageStartToServer' is never used.
+[Common/NetworkManager.cpp:63]: (style) The function 'sendRequestImageStopToServer' is never used.
+[Common/NetworkManager.cpp:41]: (style) The function 'sendRequestLoginToServer' is never used.
+[Common/NetworkManager.cpp:74]: (style) The function 'sendResponseLogin' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/videoStreamer.cpp:47]: (style) The function 'setResoltionFile' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/src/videoStreamer.cpp:40]: (style) The function 'setResolutionDevice' is never used.
+[Common/Protocol/BaseProtocol.cpp:23]: (style) The function 'set_msg' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:81]: (style) The function 'supportsFormat' is never used.
+[LgFaceRecDemoTCP_Jetson_NanoV2/trt_l2norm_helper/l2norm_helper.cpp:55]: (style) The function 'terminate' is never used.
+(information) Cppcheck cannot find all the include files (use --check-config for details)
