@@ -11,7 +11,7 @@ lg - running, testrun mode possible
 
 
 # Artifacts for Phase 1 and Phase 2
-https://github.com/shinpark-security/tartan/tree/main/00.Project_Artifacts_Final_Phase1_Phase2
+https://github.com/shinpark-security/tartan/tree/main/Project_Artifacts_Final_Phase1_Phase2
 
 
 # Build Environment
@@ -51,7 +51,7 @@ $ sudo ldconfig
 
 # Server Installation and Run
 
-$ cd ~/work/tartan/00.Project_Artifacts_Final_Phase1_Phase2/Phase_1/Source/LgFaceRecDemoTCP_Jetson_NanoV2/  
+$ cd ~/work/tartan/Project_Artifacts_Final_Phase1_Phase2/Phase_1/Source/LgFaceRecDemoTCP_Jetson_NanoV2/  
 
 $ sudo tartan_install.sh
 
