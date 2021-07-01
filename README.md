@@ -9,6 +9,11 @@ Secure TCP port: 55555
 admin - Learning, running, testrun mode possible  
 lg - running, testrun mode possible
 
+
+# Final Artifacts
+https://github.com/shinpark-security/tartan/tree/main/00.Project_Artifacts_Final_Phase1_Phase2
+
+
 # Build Environment
 $ sudo apt-get install sqlite3 libsqlite3-dev libssl-dev libsystemd-dev
 
