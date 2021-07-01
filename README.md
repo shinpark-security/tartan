@@ -10,7 +10,7 @@ admin - Learning, running, testrun mode possible
 lg - running, testrun mode possible
 
 
-# Final Artifacts
+# Artifacts for Phase 1 and Phase 2
 https://github.com/shinpark-security/tartan/tree/main/00.Project_Artifacts_Final_Phase1_Phase2
 
 
